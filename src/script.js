@@ -42,6 +42,25 @@ scene.add(camera)
 scene.add(cubes)
 
 // Render
-const renderer = new THREE.WebGLRenderer({ canvas: canvas })
+const renderer = new THREE.WebGLRenderer({ canvas })
 renderer.setSize(sizes.width, sizes.height)
-renderer.render(scene,camera)
+
+const clock = new THREE.Clock()
+
+// Animations
+function tick(){
+
+  const elapsed = clock.getElapsedTime()
+  // console.log(elapsed)
+
+  cubes.rotation.y = elapsed * Math.PI * 2
+
+  // Giro circolare...
+  camera .position.y = Math.sin(elapsed)
+  camera .position.x = Math.cos(elapsed)
+
+  renderer.render(scene,camera)
+  window.requestAnimationFrame(tick)
+
+}
+tick()
