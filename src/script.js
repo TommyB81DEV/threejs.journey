@@ -9,54 +9,41 @@ const scene = new THREE.Scene()
 const sizes = { height: 600, width: 800 }
 
 // Objects
-const cube1 = new THREE.Mesh(
-  new THREE.BoxGeometry(1, 1, 1),
-  new THREE.MeshBasicMaterial({ color: 0xff0000 })
-)
-const cube2 = new THREE.Mesh(
+const mesh = new THREE.Mesh(
   new THREE.BoxGeometry(1, 1, 1),
   new THREE.MeshBasicMaterial({ color: 0x3bcb03ff })
 )
 
-// Groups
-const cubes = new THREE.Group()
-cubes.add(cube1)
-cubes.add(cube2)
-
 // Camera
 const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height)
-camera.position.z = 4
+      camera.position.set(2,2,2)
+      camera.lookAt(mesh.position)
 
 // Helpers
 const axesHelper = new THREE.AxesHelper()
 
-// Tranformations
-cube1.position.set( -1 , 1 , 1 )
-cube1.rotation.set( -1 , 0 , 0 )
-cube2.position.set(1.5, 0.5, 1)
-cube2.rotation.set(-1, 0, 0)
-cubes.rotation.x = -1
-
 // Scene
 scene.add(axesHelper)
 scene.add(camera)
-scene.add(cubes)
+scene.add(mesh)
 
 // Render
 const renderer = new THREE.WebGLRenderer({ canvas })
-renderer.setSize(sizes.width, sizes.height)
+      renderer.setSize(sizes.width, sizes.height)
 
+// Time
 const clock = new THREE.Clock()
 
-gsap.to(cubes.position, {
-  duration: 1,
-  delay: 1,
-  x: 2,
-})
-
-// Animations
+// Animate
 function animate() {
-  renderer.render(scene, camera)
-  window.requestAnimationFrame(animate)
-}
-animate()
+
+    // Time
+    const elapsedTime = clock.getElapsedTime()
+
+    // Update objects
+    mesh.rotation.y = elapsedTime
+
+    renderer.render(scene, camera)
+    window.requestAnimationFrame(animate)
+
+} animate()
