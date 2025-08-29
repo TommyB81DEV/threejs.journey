@@ -9,7 +9,7 @@ const scene = new THREE.Scene()
 const animation = true
 const cursor = { x: 0, y: 0 }
 const customCameraControl = false
-const wireframe = false
+const wireframe = true
 
 // API
 function aspectRatio(input){
@@ -23,11 +23,36 @@ function fit(){
 let controls = null
 let sizes = fit()
 
-// Objects
+// Objects | Cube
 const cube = (new THREE.Mesh(
   new THREE.BoxGeometry(1, 1, 1),
   new THREE.MeshBasicMaterial({ color: 0x3bcb03ff, wireframe })
 ))
+
+// Objexts | Geometry Test
+const test = (() => {
+
+  const geometry = new THREE.BufferGeometry()
+  
+  const count = 5000
+
+  const depth = count * 3 * 3
+
+  const positionsArray = new Float32Array(depth)
+  for (let i = 0; i < count * 3 * 3; i++) {
+    positionsArray[i] = Math.random()
+  }
+  
+  const positionsAttribute = new THREE.BufferAttribute(positionsArray,3)
+  
+  geometry.setAttribute('position',positionsAttribute)
+  
+  return (new THREE.Mesh(
+    geometry,
+    new THREE.MeshBasicMaterial({ color: 0x3bcb03ff, wireframe })
+  ))
+
+})()
 
 // Camera
 const camera = new THREE.PerspectiveCamera(45, aspectRatio(sizes) , 0.1 , 100)
@@ -51,9 +76,10 @@ if (!customCameraControl) {
 }
 
 // Scene
-scene.add(axesHelper)
+scene.add(axesHelper) 
 scene.add(camera)
-scene.add(cube)
+// scene.add(cube)
+scene.add(test)
 
 // Resizing
 window.addEventListener('resize', e => {
