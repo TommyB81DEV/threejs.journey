@@ -1,15 +1,34 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import GUI from 'lil-gui'
+import gsap from 'gsap'
 
 // INIT
 const canvas = document.querySelector('canvas.webgl')
 const scene = new THREE.Scene()
 
-// Constants
-const animation = true
-const cursor = { x: 0, y: 0 }
-const customCameraControl = false
-const wireframe = true
+// Config
+const config = {
+  animation: true,
+  customCameraControl: false,
+  wireframe: false,
+}
+
+// Defual
+const defaultObject = {
+
+  // Cube
+  cubeColor: '#cc17d9',
+  cubeWidthSegments: 2,
+
+}
+
+// Debug
+const debugObject = {
+  color: defaultObject.cubeColor,
+  widthSegments: defaultObject.cubeWidthSegments,
+  subdivision: 2,
+}
 
 // API
 function aspectRatio(input){
@@ -18,19 +37,39 @@ function aspectRatio(input){
 function fit(){
   return { height: window.innerHeight, width: window.innerWidth }
 }
+function spin(object){
+  gsap.to(object.rotation, { y: object.rotation.y + Math.PI * 2 })
+}
+
+// Constants
+const cursor = { x: 0, y: 0 }
 
 // Vars
 let controls = null
 let sizes = fit()
 
-// Objects | Cube
-const cube = (new THREE.Mesh(
-  new THREE.BoxGeometry(1, 1, 1),
-  new THREE.MeshBasicMaterial({ color: 0x3bcb03ff, wireframe })
+// Materials
+const basicMaterial = new THREE.MeshBasicMaterial({
+  color: debugObject.color,
+  wireframe: config.wireframe,
+})
+
+// Geometries
+const cubeGeometry = (new THREE.BoxGeometry(
+  1 , 1 , 1 ,
+  defaultObject.cubeWidthSegments,
+  defaultObject.cubeWidthSegments,
+  defaultObject.cubeWidthSegments,
 ))
 
-// Objexts | Geometry Test
-const test = (() => {
+// Objects | Cube
+const cube = (new THREE.Mesh(
+  cubeGeometry,
+  basicMaterial
+))
+
+// Objects | Custom Geometry Test
+const customGeo = (() => {
 
   const geometry = new THREE.BufferGeometry()
   
@@ -49,28 +88,34 @@ const test = (() => {
   
   return (new THREE.Mesh(
     geometry,
-    new THREE.MeshBasicMaterial({ color: 0x3bcb03ff, wireframe })
+    new THREE.MeshBasicMaterial({ color: 0x3bcb03ff, wireframe: config.wireframe })
   ))
 
 })()
 
 // Camera
-const camera = new THREE.PerspectiveCamera(45, aspectRatio(sizes) , 0.1 , 100)
-      camera.position.x = 2
-      camera.position.y = 2
-      camera.position.z = 2
-      camera.lookAt(cube.position)
+const camera = (()=>{
+  const camera = new THREE.PerspectiveCamera(45, aspectRatio(sizes) , 0.1 , 100)
+  camera.position.x = 2
+  camera.position.y = 2
+  camera.position.z = 2
+  camera.lookAt(cube.position)
+  return camera
+})()
 
-// Render
-const renderer = (new THREE.WebGLRenderer({ canvas }))
-      renderer.setSize(sizes.width,sizes.height)
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio,2))
+// Renderer
+const renderer = (()=>{
+  const renderer = (new THREE.WebGLRenderer({ canvas }))
+  renderer.setSize(sizes.width,sizes.height)
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio,2))
+  return renderer
+})()
 
 // Helpers
 const axesHelper = new THREE.AxesHelper()
 
 // Controls
-if (!customCameraControl) {
+if (!config.customCameraControl) {
   controls = new OrbitControls( camera , canvas )
   controls.enableDamping = true
 }
@@ -78,8 +123,29 @@ if (!customCameraControl) {
 // Scene
 scene.add(axesHelper) 
 scene.add(camera)
-// scene.add(cube)
-scene.add(test)
+// scene.add(customGeo)
+scene.add(cube)
+
+// Cursor
+window.addEventListener('mousemove', e => {
+  cursor.x = ( e.clientX / sizes.width ) - 0.5
+  cursor.y = -( e.clientY / sizes.height - 0.5)
+})
+
+// Debugger
+window.addEventListener('keydown', e => {
+  if (e.key === 'h') gui.show()
+})
+
+// Fullscreen
+window.addEventListener('dblclick',e => {
+  if (document.fullscreenElement) {
+    document.exitFullscreen()
+  }
+  else {
+    canvas.requestFullscreen()
+  }
+})
 
 // Resizing
 window.addEventListener('resize', e => {
@@ -93,26 +159,69 @@ window.addEventListener('resize', e => {
 
 })
 
-// Fullscreen
-window.addEventListener('dblclick',e => {
-  if (document.fullscreenElement) {
-    document.exitFullscreen()
-  }
-  else {
-    canvas.requestFullscreen()
-  }
-})
+// Debug GUI
+const gui = (() => {
 
-// Cursor
-window.addEventListener('mousemove', e => {
-  cursor.x = ( e.clientX / sizes.width ) - 0.5
-  cursor.y = -( e.clientY / sizes.height - 0.5)
-})
+  const gui = new GUI()
+        gui.close()
+        gui.hide()
+
+  debugObject.spin = () => spin(cube)
+
+  const generalTwekas = gui.addFolder('General')
+        generalTwekas.close()
+
+  const cubeTweaks = gui.addFolder('Cube')
+        cubeTweaks.close()
+
+  // GENERAL
+  generalTwekas
+    .add(config, 'customCameraControl')
+
+  // CUBE
+  cubeTweaks
+    .add(cube.position, 'y').min(-3).max(3).step(0.01).name('elevation')
+
+  cubeTweaks
+    .add(cube, 'visible')
+  
+  cubeTweaks
+    .add(basicMaterial, 'wireframe').name('Wireframe')
+
+  cubeTweaks
+    .addColor(debugObject, 'color').onChange(() => {
+    basicMaterial.color.set(debugObject.color)
+  })
+
+  cubeTweaks
+    .add(debugObject, 'widthSegments')
+    .name('Width Segments')
+    .min(2)
+    .max(20)
+    .step(1)
+    .onFinishChange(() => {
+      cube.geometry.dispose()
+      cube.geometry = new THREE.BoxGeometry(
+        1,
+        1,
+        1,
+        debugObject.widthSegments,
+        debugObject.widthSegments,
+        debugObject.widthSegments
+      )
+    })
+
+  cubeTweaks
+    .add(debugObject, 'spin').name('Cube Spin')
+
+  return gui
+
+})()
 
 // Animate
 function animate() {
 
-    if (customCameraControl) {
+    if (config.customCameraControl) {
       camera.position.x = Math.sin(cursor.x * Math.PI * 2) * 5
       camera.position.z = Math.cos(cursor.x * Math.PI * 2) * 5
       camera.position.y = cursor.y * 5
@@ -123,6 +232,6 @@ function animate() {
 
     renderer.render(scene, camera)
 
-    if (animation) window.requestAnimationFrame(animate)
+    if (config.animation) window.requestAnimationFrame(animate)
 
 } animate()

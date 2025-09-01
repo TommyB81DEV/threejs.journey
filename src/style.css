@@ -13,3 +13,18 @@ html, body {
   top: 0;
   outline: none;
 }
+
+.lil-gui {
+  --width: 500px;
+  --name-width: 65%;
+  --font-size: 1.3rem;
+}
+
+.lil-gui button {
+  height: auto !important;
+  padding: 5px;
+}
+
+.lil-gui .controller {
+  padding: 5px;
+}
