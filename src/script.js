@@ -2,20 +2,17 @@ import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import GUI from 'lil-gui'
 import gsap from 'gsap'
+import { ThreeMFLoader } from 'three/examples/jsm/Addons.js'
 
 // INIT
 const canvas = document.querySelector('canvas.webgl')
 const scene = new THREE.Scene()
 
-// Config
-const config = {
-  animation: true,
-  customCameraControl: false,
-  wireframe: false,
-}
-
-// Defual
+// Default
 const defaultObject = {
+
+  // Commons
+  color: '#cc17d9',
 
   // Cube
   cubeColor: '#cc17d9',
@@ -37,9 +34,6 @@ function aspectRatio(input){
 function fit(){
   return { height: window.innerHeight, width: window.innerWidth }
 }
-function spin(object){
-  gsap.to(object.rotation, { y: object.rotation.y + Math.PI * 2 })
-}
 
 // Constants
 const cursor = { x: 0, y: 0 }
@@ -51,6 +45,7 @@ let sizes = fit()
 // TEXTURES
 const loadingManager = new THREE.LoadingManager()
 const textureLoader = new THREE.TextureLoader(loadingManager)
+
 const textureColor = textureLoader.load('/textures/door/color.jpg')
       textureColor.colorSpace = THREE.SRGBColorSpace
 const textureAlpha = textureLoader.load('/textures/door/alpha.jpg')
@@ -60,59 +55,39 @@ const textureMetalness = textureLoader.load('/textures/door/metalness.jpg')
 const textureNormal = textureLoader.load('/textures/door/normal.jpg')
 const textureRoughness = textureLoader.load('/textures/door/roughness.jpg')
 
+const texture = textureColor
+
 // Materials
-const basicMaterial = new THREE.MeshBasicMaterial({
-  // color: debugObject.color,
-  map: textureColor,
-  wireframe: config.wireframe,
-})
+const material = new THREE.MeshBasicMaterial({map:texture})
+      material.flatShading = false
+      material.opacity = 1
+      material.side = THREE.DoubleSide
+      material.transparent = true
+      material.wireframe = false
 
 // Geometries
-const cubeGeometry = (new THREE.BoxGeometry(
-  1 , 1 , 1 ,
-  defaultObject.cubeWidthSegments,
-  defaultObject.cubeWidthSegments,
-  defaultObject.cubeWidthSegments,
+const planeGeometry = new THREE.PlaneGeometry(2,2)
+const sphereGeometry = new THREE.SphereGeometry()
+const torusGeometry = new THREE.TorusGeometry(0.8)
+
+// Objects
+const plane = (new THREE.Mesh(
+  planeGeometry,
+  material
 ))
-
-// Objects | Cube
-const cube = (new THREE.Mesh(
-  cubeGeometry,
-  basicMaterial
+const torus = (new THREE.Mesh(
+  torusGeometry,
+  material
 ))
-
-// Objects | Custom Geometry Test
-const customGeo = (() => {
-
-  const geometry = new THREE.BufferGeometry()
-  
-  const count = 5000
-
-  const depth = count * 3 * 3
-
-  const positionsArray = new Float32Array(depth)
-  for (let i = 0; i < count * 3 * 3; i++) {
-    positionsArray[i] = Math.random()
-  }
-  
-  const positionsAttribute = new THREE.BufferAttribute(positionsArray,3)
-  
-  geometry.setAttribute('position',positionsAttribute)
-  
-  return (new THREE.Mesh(
-    geometry,
-    new THREE.MeshBasicMaterial({ color: 0x3bcb03ff, wireframe: config.wireframe })
-  ))
-
-})()
+const sphere = new THREE.Mesh(sphereGeometry, material)
 
 // Camera
 const camera = (()=>{
   const camera = new THREE.PerspectiveCamera(45, aspectRatio(sizes) , 0.1 , 100)
-  camera.position.x = 2
-  camera.position.y = 2
-  camera.position.z = 2
-  camera.lookAt(cube.position)
+  camera.position.x = 6
+  camera.position.y = 6
+  camera.position.z = 6
+  camera.lookAt(plane.position)
   return camera
 })()
 
@@ -128,16 +103,19 @@ const renderer = (()=>{
 const axesHelper = new THREE.AxesHelper()
 
 // Controls
-if (!config.customCameraControl) {
-  controls = new OrbitControls( camera , canvas )
-  controls.enableDamping = true
-}
+controls = new OrbitControls( camera , canvas )
+controls.enableDamping = true
+
+// Init placements
+torus.position.x = 2.5
+sphere.position.x = -2.5
 
 // Scene
-scene.add(axesHelper) 
+scene.add(axesHelper)
 scene.add(camera)
-// scene.add(customGeo)
-scene.add(cube)
+scene.add(plane)
+scene.add(sphere)
+scene.add(torus)
 
 // Cursor
 window.addEventListener('mousemove', e => {
@@ -179,53 +157,31 @@ const gui = (() => {
         gui.close()
         gui.hide()
 
-  debugObject.spin = () => spin(cube)
-
-  const generalTwekas = gui.addFolder('General')
-        generalTwekas.close()
-
-  const cubeTweaks = gui.addFolder('Cube')
-        cubeTweaks.close()
-
-  // GENERAL
-  generalTwekas
-    .add(config, 'customCameraControl')
-
-  // CUBE
-  cubeTweaks
-    .add(cube.position, 'y').min(-3).max(3).step(0.01).name('elevation')
-
-  cubeTweaks
-    .add(cube, 'visible')
-  
-  cubeTweaks
-    .add(basicMaterial, 'wireframe').name('Wireframe')
-
-  cubeTweaks
-    .addColor(debugObject, 'color').onChange(() => {
-    basicMaterial.color.set(debugObject.color)
-  })
-
-  cubeTweaks
-    .add(debugObject, 'widthSegments')
-    .name('Width Segments')
-    .min(2)
-    .max(20)
-    .step(1)
-    .onFinishChange(() => {
-      cube.geometry.dispose()
-      cube.geometry = new THREE.BoxGeometry(
-        1,
-        1,
-        1,
-        debugObject.widthSegments,
-        debugObject.widthSegments,
-        debugObject.widthSegments
-      )
+  // GENERAL   
+  gui
+    .addColor(debugObject, 'color')
+    .onChange(() => {
+      material.color.set(debugObject.color)
     })
 
-  cubeTweaks
-    .add(debugObject, 'spin').name('Cube Spin')
+  gui
+    .add(material, 'flatShading')
+    .name('Flat Shading')
+  
+  gui
+    .add(material, 'opacity')
+    .min(0)
+    .max(1)
+    .step(0.1)
+    .name('Opacity')
+
+  gui
+    .add(material, 'transparent')
+    .name('Transparent')
+
+  gui
+    .add(material, 'wireframe')
+    .name('Wireframe')
 
   return gui
 
@@ -233,18 +189,7 @@ const gui = (() => {
 
 // Animate
 function animate() {
-
-    if (config.customCameraControl) {
-      camera.position.x = Math.sin(cursor.x * Math.PI * 2) * 5
-      camera.position.z = Math.cos(cursor.x * Math.PI * 2) * 5
-      camera.position.y = cursor.y * 5
-      camera.lookAt(cube.position)
-    }
-
-    else controls.update()
-
+    controls.update()
     renderer.render(scene, camera)
-
-    if (config.animation) window.requestAnimationFrame(animate)
-
+    window.requestAnimationFrame(animate)
 } animate()
