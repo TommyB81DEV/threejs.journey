@@ -48,9 +48,22 @@ const cursor = { x: 0, y: 0 }
 let controls = null
 let sizes = fit()
 
+// TEXTURES
+const loadingManager = new THREE.LoadingManager()
+const textureLoader = new THREE.TextureLoader(loadingManager)
+const textureColor = textureLoader.load('/textures/door/color.jpg')
+      textureColor.colorSpace = THREE.SRGBColorSpace
+const textureAlpha = textureLoader.load('/textures/door/alpha.jpg')
+const textureAmbientOcclusion = textureLoader.load('/textures/door/ambientOcclusion.jpg')
+const textureHeight = textureLoader.load('/textures/door/height.jpg')
+const textureMetalness = textureLoader.load('/textures/door/metalness.jpg')
+const textureNormal = textureLoader.load('/textures/door/normal.jpg')
+const textureRoughness = textureLoader.load('/textures/door/roughness.jpg')
+
 // Materials
 const basicMaterial = new THREE.MeshBasicMaterial({
-  color: debugObject.color,
+  // color: debugObject.color,
+  map: textureColor,
   wireframe: config.wireframe,
 })
 
