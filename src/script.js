@@ -6,6 +6,7 @@ import {
   aspectRatio,
   axesHelper,
   createText,
+  creatDonuts,
   fit,
   rotation,
 } from './api'
@@ -15,10 +16,26 @@ const canvas = document.querySelector('canvas.webgl')
 const helpers = {}
 const scene = new THREE.Scene()
 
+/* TEXTURES */
+const textureLoader = new THREE.TextureLoader()
+const matcapTexture = textureLoader.load('textures/matcaps/1.png')
+      matcapTexture.colorSpace = THREE.SRGBColorSpace
+
+/* MATERIALS */
+const matcapMaterial = new THREE.MeshMatcapMaterial({ matcap: matcapTexture })
+
 /* SETTINGS | Default */
 const defaultObject = {
   // Commons
   color: '#cc17d9',
+
+  // Donuts
+  donuts: {
+    geometryParams: [ 0.3, 0.2, 20, 45 ],
+    mat: matcapMaterial,
+    map: matcapTexture,
+    n: 100,
+  },
 
   // Light | Point
   pointLightDistance: 5,
@@ -26,16 +43,17 @@ const defaultObject = {
   // Animation
   rotationSpeed: 0.1,
 
-  // Fonts
-  font: {
+  // Text
+  text: {
     color: 0xffffff,
+    mat: matcapMaterial,
     path: '/fonts/helvetiker_regular.typeface.json',
     settings: font => ({
       bevelEnabled: true,
       bevelOffset: 0,
-      bevelSegments: 5,
+      bevelSegments: 20,
       bevelSize: 0.02,
-      bevelThickness: 0.03,
+      bevelThickness: 0.02,
       curveSegments: 6,
       font,
       depth: 0.2,
@@ -60,8 +78,9 @@ let sizes = fit()
 /* CLOCK */
 const clock = new THREE.Clock()
 
-/* FONTS */
-const text = await createText(defaultObject.font)
+/* OBJECTS */
+const donuts = creatDonuts({ ...defaultObject.donuts , scene })
+const text = await createText(defaultObject.text)
 
 /* CAMERA | Init */
 const camera = (()=>{
@@ -79,13 +98,6 @@ const controls = (()=>{
         controls.enableDamping = true
   return controls
 })()
-
-/* HELPERS */
-axesHelper({ 
-  enable: debugObject.axesHelper,
-  helpers,
-  scene,
-})
 
 /* RENDERER */
 const renderer = (()=>{
@@ -162,9 +174,9 @@ const gui = (() => {
 
           if (debugObject.rotationEnabled) rotationSpeedController.show()
 
-          folder
+          /*folder
             .add(text.material,'wireframe')
-            .name('Wireframe')
+            .name('Wireframe')*/
 
   })()
 
@@ -172,9 +184,17 @@ const gui = (() => {
 
 })()
 
+/* HELPERS */
+axesHelper({ 
+  enable: debugObject.axesHelper,
+  helpers,
+  scene,
+})
+
 /* SCENE */
 scene.add(camera)
 scene.add(text)
+donuts.forEach(d => scene.add(d))
 
 /* ANIMATE */
 function animate() {
@@ -184,7 +204,7 @@ function animate() {
   rotation({
     active: debugObject.rotationEnabled,
     elapsedTime,
-    meshes: [ text ],
+    meshes: [ text , ...donuts ],
     speed: defaultObject.rotationSpeed,
   })
 
