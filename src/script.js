@@ -10,6 +10,7 @@ import {
   rotation,
   toggleCustomLights,
 } from './api'
+import { shininess } from 'three/tsl'
 
 /* INIT */
 const canvas = document.querySelector('canvas.webgl')
@@ -37,7 +38,7 @@ const defaultObject = {
 const debugObject = {
   axesHelper: false,
   color: defaultObject.cubeColor,
-  customLights: false,
+  customLights: true,
   widthSegments: defaultObject.cubeWidthSegments,
   subdivision: 2,
 }
@@ -48,15 +49,21 @@ const cursor = { x: 0, y: 0 }
 /* VARS */
 let sizes = fit()
 
+/* CLOCK */
+const clock = new THREE.Clock()
+
 /* ENVIRONMENT */
-const rgbeLoader = (() => {
+const rgbeLoader = (()=>{
+
   const rgbeLoader = new RGBELoader()
         rgbeLoader.load('./textures/environmentMap/2k.hdr', envMap => {
           envMap.mapping = THREE.EquirectangularReflectionMapping
           scene.background = envMap
           scene.environment = envMap
         })
+
   return rgbeLoader
+
 })()
 
 /* TEXTURES */
@@ -85,29 +92,11 @@ const textures = (()=>{
 
 })()
 
-/* TIME */
-const clock = new THREE.Clock()
-
 /* MATERIALS */
 const material = (() => {
 
-  // const material = new THREE.MeshBasicMaterial({map:texture})
-
-  // const material = new THREE.MeshMatcapMaterial()
-  //       material.matcap = textureMatcap
-
-  // const material = new THREE.MeshDepthMaterial()
-
-  // const material = new THREE.MeshLambertMaterial()
-
-  // const material = new THREE.MeshPhongMaterial()
-  //       material.shininess = 50
-  //       material.specular = new THREE.Color(0x00ff48)
-
-  // const material = new THREE.MeshToonMaterial()
-  //       material.gradientMap = textureGradient
-  
-  const material = new THREE.MeshStandardMaterial()
+  // Standard &/or Phisical Material
+  const material = new THREE.MeshPhysicalMaterial()
 
         material.flatShading = false
         material.opacity = 1
@@ -135,14 +124,30 @@ const material = (() => {
         material.normalMap = textures.textureDoorNormal
         material.normalScale.set(1,1)
 
+        // Phisical Material specific
+        material.clearcoat = 1
+        material.clearcoatRoughness = 0
+
+        material.sheen = 1
+        material.sheenColor.set(1,1,1)
+        material.sheenRoughness = 0.25
+
+        material.iridescence = 1
+        material.iridescenceIOR = 1
+        material.iridescenceThicknessRange = [ 100 , 100 ]
+
+        material.transmission = 1
+        material.ior = 1.5
+        material.thickness = 0.5
+
   return material
 
 })()
 
 /* OBJECTS | Geometries */
 const planeGeometry = new THREE.PlaneGeometry(4,4,100,100)
-const sphereGeometry = new THREE.SphereGeometry(2,64,64)
-const torusGeometry = new THREE.TorusGeometry(1,0.5,54,128)
+const sphereGeometry = new THREE.SphereGeometry(1.5,64,64)
+const torusGeometry = new THREE.TorusGeometry(1,0.5,100,200,Math.PI*2)
 
 /* OBJECTS | Meshes */
 const plane = (new THREE.Mesh(
@@ -173,7 +178,7 @@ const controls = (()=>{
 })()
 
 /* LIGHTS */
-const { ambientLight , pointLight } = toggleCustomLights(scene,true)
+const { pointLight } = toggleCustomLights(scene,true)
 
 /* RENDERER */
 const renderer = (()=>{
@@ -184,7 +189,7 @@ const renderer = (()=>{
 })()
 
 /* EVENT | Debugger */
-window.addEventListener('keydown', e => {
+window.addEventListener('keydown',e => {
   if (e.key === 'h') {
     if (gui._hidden) gui.show()
     else gui.hide()
@@ -202,7 +207,7 @@ window.addEventListener('dblclick',e => {
 })
 
 /* EVENT | Resizing */
-window.addEventListener('resize', e => {
+window.addEventListener('resize',e => {
 
   sizes = fit()
 
@@ -220,120 +225,231 @@ const gui = (() => {
         gui.close()
         gui.hide()
 
-  // GENERAL   
-  const debugFolder = gui.addFolder('Debug').close()
+  // GENERAL
+  const debug = (() => {
 
-    debugFolder
-      .addColor(debugObject, 'color')
-      .onChange(() => {
-        material.color.set(debugObject.color)
-      })
+    const folder = gui.addFolder('Debug').close()
 
-  // Flags
-  const flagsFolder = gui.addFolder('Flags').close()
+          folder
+            .add(debugObject,'axesHelper')
+            .onChange(val => axesHelper(scene,val))
+            .name('Axis Helper')
 
-    flagsFolder
-      .add(debugObject, 'axesHelper')
-      .onChange(val => axesHelper(scene,val))
-      .name('Axis Helper')
+          folder
+            .addColor(debugObject,'color')
+            .onChange(() => material.color.set(debugObject.color))
 
-    flagsFolder
-      .add(debugObject, 'customLights')
+          folder
+            .add(defaultObject,'rotationSpeed')
+            .min(0)
+            .max(5)
+            .step(0.1)
+            .name('Rotation Speed')
+
+          folder
+            .add(material,'wireframe')
+            .name('Wireframe')
+
+  })()
+
+  // Point Light
+  const customLights = (()=>{
+
+    const folder = gui.addFolder('Custom Lights').close()
+
+    const pointLightDistance = (
+      folder
+        .add(pointLight.position, 'z')
+        .min(1)
+        .max(10)
+        .step(0.1)
+        .onFinishChange((val) => pointLight.position.setComponent(2, val))
+        .name('Point Light Distance')
+        .hide()
+    )
+
+    if (debugObject.customLights) pointLightDistance.show()
+
+    folder
+      .add(debugObject,'customLights')
       .onChange(enable => {
-        toggleCustomLights(scene, enable)
+        toggleCustomLights(scene,enable)
         if (enable) pointLightDistance.show()
         else pointLightDistance.hide()
       })
-      .name('Custom Lights')
+      .name('Active')
 
-  const pointLightDistance = (
-    gui
-      .add(pointLight.position, 'z')
-      .min(1)
-      .max(10)
-      .step(0.1)
-      .onFinishChange((val) => pointLight.position.setComponent(2, val))
-      .name('Point Light Distance')
-      .hide()
-  )
+  })()
 
-  // Material
-  const materialFolder = gui.addFolder('Material')
+  // Phong Material
+  /*const phongFolder = (()=>{
 
-    // Flags
-    materialFolder
-      .add(material,'flatShading')
-      .name('Flat Shading')
+    const folder = gui.addFolder('Phong Material')
 
-    materialFolder
-      .add(material,'transparent')
-      .name('Transparent')
+          folder
+            .add(material,'shininess')
+            .min(0)
+            .max(200)
+            .step(1)
+            .name('Shininess')
 
-    materialFolder
-      .add(material,'wireframe')
-      .name('Wireframe')
- 
-    // Ranges
-    materialFolder
-      .add(material,'aoMapIntensity')
-      .min(0)
-      .max(1)
-      .step(0.1)
-      .name('Ambient Occlusion Map Intensity')
+          folder
+            .addColor(material,'specular')
+            .name('Specular')
 
-    materialFolder
-      .add(material,'displacementScale')
-      .min(0)
-      .max(2)
-      .step(0.1)
-      .name('Displacement Scale')
+  })()*/
 
-    materialFolder
-      .add(material,'metalness')
-      .min(0)
-      .max(1)
-      .step(0.0001)
-      .name('Metalness')
+  // Standard Material Folder
+  /* const standardFolder = (() => {
 
-    materialFolder
-      .add(material.normalScale,'x')
-      .min(0)
-      .max(1)
-      .step(0.001)
-      .onChange(val => material.normalScale.setComponent(0,val))
-      .name('Normal Scale X')
+    const folder = gui.addFolder('Material | Standard')
 
-    materialFolder
-      .add(material.normalScale,'y')
-      .min(0)
-      .max(1)
-      .step(0.001)
-      .onChange((val) => material.normalScale.setComponent(1,val))
-      .name('Normal Scale Y')
+          // Flags
+          folder
+            .add(material,'flatShading')
+            .name('Flat Shading')
 
-    materialFolder
-      .add(material,'opacity')
-      .min(0)
-      .max(1)
-      .step(0.1)
-      .name('Opacity')
+          folder
+            .add(material,'opacity')
+            .min(0)
+            .max(1)
+            .step(0.1)
+            .name('Opacity')
 
-    materialFolder
-      .add(material,'roughness')
-      .min(0)
-      .max(1)
-      .step(0.0001)
-      .name('Roughness')
+          // Ranges
+          folder
+            .add(material,'aoMapIntensity')
+            .min(0)
+            .max(1)
+            .step(0.1)
+            .name('Ambient Occlusion Map Intensity')
+      
+          folder
+            .add(material,'displacementScale')
+            .min(0)
+            .max(2)
+            .step(0.1)
+            .name('Displacement Scale')
+      
+          folder
+            .add(material.normalScale, 'x')
+            .min(0)
+            .max(1)
+            .step(0.001)
+            .onChange((val) => material.normalScale.setComponent(0, val))
+            .name('Normal Scale X')
 
-  // Defaults
-  const othersFolder = gui.addFolder('Others Settings').close()
+          folder
+            .add(material,'metalness')
+            .min(0)
+            .max(1)
+            .step(0.0001)
+            .name('Metalness')
 
-    othersFolder
-      .add(defaultObject, 'rotationSpeed')
-      .min(0)
-      .max(5)
-      .step(0.1)
-      .name('Rotation Speed')
+          folder
+            .add(material.normalScale, 'y')
+            .min(0)
+            .max(1)
+            .step(0.001)
+            .onChange((val) => material.normalScale.setComponent(1, val))
+            .name('Normal Scale Y')
+
+          folder
+            .add(material,'roughness')
+            .min(0)
+            .max(1)
+            .step(0.0001)
+            .name('Roughness')
+
+  })()*/
+
+  // Phisical Material Folder
+  const phisicalFolder = (() => {
+
+    const folder = gui.addFolder('Material | Phisical')
+
+          folder
+            .add(material,'clearcoat')
+            .min(0)
+            .max(1)
+            .step(0.0001)
+            .name('Clearcoat')
+        
+          folder
+            .add(material,'clearcoatRoughness')
+            .min(0)
+            .max(1)
+            .step(0.0001)
+            .name('Clearcoat Roughness')
+
+          folder
+            .add(material,'iridescence')
+            .min(0)
+            .max(1)
+            .step(0.0001)
+            .name('Iridescence')
+        
+          folder
+            .addColor(material, 'iridescenceIOR')
+            .min(1)
+            .max(2.333)
+            .step(0.0001)
+            .name('Iridescence IOR')
+        
+          folder
+            .add(material.iridescenceThicknessRange,'0')
+            .min(1)
+            .max(1000)
+            .step(1)
+            .name('Iridescence Thickness Range 0')
+        
+          folder
+            .add(material.iridescenceThicknessRange,'1')
+            .min(1)
+            .max(1000)
+            .step(1)
+            .name('Iridescence Thickness Range 1')
+
+          folder
+            .add(material,'sheen')
+            .min(0)
+            .max(1)
+            .step(0.0001)
+            .name('Sheen')
+        
+          folder
+            .addColor(material,'sheenColor')
+            .name('Sheen Color')
+        
+          folder
+            .add(material,'sheenRoughness')
+            .min(0)
+            .max(1)
+            .step(0.0001)
+            .name('Sheen Roughness')
+
+          folder
+            .add(material,'transmission')
+            .min(0)
+            .max(1)
+            .step(0.0001)
+            .name('Transmission')
+
+          folder
+            .add(material,'ior')
+            .min(1)
+            .max(10)
+            .step(0.0001)
+            .name('Index Of Reflection')
+
+          folder
+            .add(material,'thickness')
+            .min(0)
+            .max(1)
+            .step(0.0001)
+            .name('Index Of Reflection')
+
+  })()
 
   return gui
 
