@@ -5,6 +5,7 @@ export default {
     emptyOutDir: true, // Empty the folder first
     outDir: '../dist', // Output in the dist/ folder
     sourcemap: true, // Add sourcemap
+    target: 'es2022', // to support top-level await
   },
   plugins: [
     restart({ restart: ['../static/**'] }), // Restart server on static file change
