@@ -13,10 +13,12 @@ import {
 /* INIT */
 const canvas = document.querySelector('canvas.webgl')
 const helpers = {}
+const lights = {}
 const scene = new THREE.Scene()
 
 /* SETTINGS | Default */
 const defaultObject = {
+
   // Commons
   color: '#cc17d9',
 
@@ -25,6 +27,7 @@ const defaultObject = {
     params: [0xffffff,1.5],
     position: [0, 0, 5],
   },
+  lights: [ 'AmbientLight' , 'PointLight' ],
   pointLight: {
     params: [0xffffff, 50],
     position: [0, 0, 5],
@@ -32,6 +35,7 @@ const defaultObject = {
 
   // Animation
   rotationSpeed: 0.1,
+
 }
 
 /* SETTINGS | Debug */
@@ -51,10 +55,12 @@ const material = new THREE.MeshStandardMaterial()
 
 /* LIGHTS */
 const { ambientLight, pointLight } = toggleCustomLights(true,scene,defaultObject)
+lights.ambientLight = ambientLight
+lights.pointLight = pointLight
 
 /* OBJECTS */
-const cube = (new THREE.Mesh
-  (new THREE.BoxGeometry(0.75, 0.75, 0.75),
+const cube = (new THREE.Mesh(
+  new THREE.BoxGeometry(0.75, 0.75, 0.75),
   material
 ))
 const plane = (new THREE.Mesh(
@@ -76,10 +82,10 @@ const clock = new THREE.Clock()
 /* CAMERA | Init */
 const camera = (()=>{
   const camera = new THREE.PerspectiveCamera(45, aspectRatio(sizes) , 0.1 , 100)
-  camera.position.x = 6
-  camera.position.y = 6
-  camera.position.z = 6
-  camera.lookAt(cube.position)
+        camera.position.x = 6
+        camera.position.y = 6
+        camera.position.z = 6
+        camera.lookAt(cube.position)
   return camera
 })()
 
@@ -132,16 +138,17 @@ window.addEventListener('resize',e => {
 const gui = (() => {
 
   const gui = new GUI()
-        gui.close()
+        // gui.close()
         gui.hide()
 
   // GENERAL
   const debug = (() => {
-    const folder = gui.addFolder('Debug').close()
+
+    const folder = gui.addFolder('Debug')
 
     folder
       .add(debugObject, 'axesHelper')
-      .onChange((enable) => axesHelper({ enable, helpers, scene }))
+      .onChange(enable => axesHelper({ enable, helpers, scene }))
       .name('Axis Helper')
 
     folder
@@ -149,58 +156,83 @@ const gui = (() => {
       .onChange(() => text.material.color.set(debugObject.color))
 
     folder
-      .add(debugObject, 'rotationEnabled')
-      .onChange((enable) =>
-        enable ? rotationSpeedController.show() : rotationSpeedController.hide()
-      )
+      .add(debugObject,'customLights')
+      .onChange(enable => {
+        if (enable) {
 
-    const rotationSpeedController = folder
-      .add(defaultObject, 'rotationSpeed')
-      .min(0)
-      .max(5)
-      .step(0.1)
-      .name('Rotation Speed')
-      .hide()
+          const {
+            ambientLight,
+            pointLight,
+          } = toggleCustomLights(enable,scene,defaultObject)
+
+          lights.ambientLight = ambientLight
+          lights.pointLight = pointLight
+
+        }
+        else {
+          toggleCustomLights(enable,scene,defaultObject)
+        }
+      })
+      .name('Custom Lights')
+
+    folder
+      .add(debugObject, 'rotationEnabled')
+      .onChange(enable => enable ? rotationSpeedController.show() : rotationSpeedController.hide())
+
+    const rotationSpeedController = (
+      folder
+        .add(defaultObject, 'rotationSpeed')
+        .min(0)
+        .max(5)
+        .step(0.1)
+        .name('Rotation Speed')
+        .hide()
+    )
 
     if (debugObject.rotationEnabled) rotationSpeedController.show()
 
-    folder.add(material, 'wireframe').name('Wireframe')
+    folder
+      .add(material,'wireframe')
+      .name('Wireframe')
+
   })()
 
   // AMBIENT LIGHT
   const ambientLightDebug = (() => {
+    
     const folder = gui.addFolder('Ambient Light')
 
     folder
-      .addColor(ambientLight, 'color')
+      .addColor(lights.ambientLight,'color')
       .name('Color')
 
   })()
 
   // POINT LIGHT
   const pointLightDebug = (() => {
+
     const folder = gui.addFolder('Point Light')
 
     folder
-      .addColor(pointLight,'color')
+      .addColor(lights.pointLight,'color')
       .name('Color')
 
     folder
-      .add(pointLight.position,'x')
+      .add(lights.pointLight.position,'x')
       .min(0)
       .max(10)
       .step(0.1)
       .name('Position X')
 
     folder
-      .add(pointLight.position,'y')
+      .add(lights.pointLight.position,'y')
       .min(0)
       .max(10)
       .step(0.1)
       .name('Position Y')
 
     folder
-      .add(pointLight.position,'z')
+      .add(lights.pointLight.position,'z')
       .min(2)
       .max(10)
       .step(0.1)

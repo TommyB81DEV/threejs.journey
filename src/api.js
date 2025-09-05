@@ -34,19 +34,21 @@ export function rotation(params) {
 }
 export function toggleCustomLights(enable,scene,settings) {
 
+  const lights = settings.lights
+
   const {
-    ambientLight,
-    pointLight,
+    ambientLight: alSettings,
+    pointLight: plSettings,
   } = settings
 
   const {
     params: alParams,
-  } = ambientLight
+  } = alSettings
 
   const {
     params: plParams,
     position: plPosition
-  } = pointLight
+  } = plSettings
 
   if (enable) {
   
@@ -58,6 +60,8 @@ export function toggleCustomLights(enable,scene,settings) {
     scene.add(ambientLight)
     scene.add(pointLight)
 
+    console.log(scene)
+
     return {
       ambientLight,
       pointLight,
@@ -66,8 +70,25 @@ export function toggleCustomLights(enable,scene,settings) {
   }
 
   else {
-    scene.remove(ambientLight)
-    scene.remove(pointLight)
+
+    console.log('Scene BEFORE removal',scene)
+
+    for (const object of scene.children) {
+
+      console.groupCollapsed('Lights')
+        console.log('Lights',lights)
+        console.log(`Includes ${object.type}:`,String(lights.includes(object.type)))
+        console.groupEnd()
+
+      if (lights.includes(object.type)) {
+        object.dispose()
+        scene.remove(object)
+      }
+
+    }
+
+    console.log('Scene AFTER removal', scene)
+    
   }
 
 }
