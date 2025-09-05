@@ -5,10 +5,9 @@ import GUI from 'lil-gui'
 import {
   aspectRatio,
   axesHelper,
-  createText,
-  creatDonuts,
   fit,
   rotation,
+  toggleCustomLights,
 } from './api'
 
 /* INIT */
@@ -16,52 +15,23 @@ const canvas = document.querySelector('canvas.webgl')
 const helpers = {}
 const scene = new THREE.Scene()
 
-/* TEXTURES */
-const textureLoader = new THREE.TextureLoader()
-const matcapTexture = textureLoader.load('textures/matcaps/1.png')
-      matcapTexture.colorSpace = THREE.SRGBColorSpace
-
-/* MATERIALS */
-const matcapMaterial = new THREE.MeshMatcapMaterial({ matcap: matcapTexture })
-
 /* SETTINGS | Default */
 const defaultObject = {
   // Commons
   color: '#cc17d9',
 
-  // Donuts
-  donuts: {
-    geometryParams: [ 0.3, 0.2, 20, 45 ],
-    mat: matcapMaterial,
-    map: matcapTexture,
-    n: 100,
+  // Lights
+  ambientLight: {
+    params: [0xffffff,1.5],
+    position: [0, 0, 5],
   },
-
-  // Light | Point
-  pointLightDistance: 5,
+  pointLight: {
+    params: [0xffffff, 50],
+    position: [0, 0, 5],
+  },
 
   // Animation
   rotationSpeed: 0.1,
-
-  // Text
-  text: {
-    color: 0xffffff,
-    mat: matcapMaterial,
-    path: '/fonts/helvetiker_regular.typeface.json',
-    settings: font => ({
-      bevelEnabled: true,
-      bevelOffset: 0,
-      bevelSegments: 20,
-      bevelSize: 0.02,
-      bevelThickness: 0.02,
-      curveSegments: 6,
-      font,
-      depth: 0.2,
-      size: 0.5,
-    }),
-    text: 'Voice In The Desert',
-  },
-
 }
 
 /* SETTINGS | Debug */
@@ -75,12 +45,33 @@ const debugObject = {
 /* VARS */
 let sizes = fit()
 
-/* CLOCK */
-const clock = new THREE.Clock()
+/* MATERIALS */
+const material = new THREE.MeshStandardMaterial()
+      material.roughness = 0.4
+
+/* LIGHTS */
+const { ambientLight, pointLight } = toggleCustomLights(true,scene,defaultObject)
 
 /* OBJECTS */
-const donuts = creatDonuts({ ...defaultObject.donuts , scene })
-const text = await createText(defaultObject.text)
+const cube = (new THREE.Mesh
+  (new THREE.BoxGeometry(0.75, 0.75, 0.75),
+  material
+))
+const plane = (new THREE.Mesh(
+  new THREE.PlaneGeometry(5,5),
+  material
+))
+const sphere = (new THREE.Mesh(
+  new THREE.SphereGeometry(0.5, 32, 32),
+  material
+))
+const torus = (new THREE.Mesh(
+  new THREE.TorusGeometry(0.3, 0.2, 32, 64),
+  material
+))
+
+/* CLOCK */
+const clock = new THREE.Clock()
 
 /* CAMERA | Init */
 const camera = (()=>{
@@ -88,7 +79,7 @@ const camera = (()=>{
   camera.position.x = 6
   camera.position.y = 6
   camera.position.z = 6
-  camera.lookAt(text.position)
+  camera.lookAt(cube.position)
   return camera
 })()
 
@@ -146,37 +137,74 @@ const gui = (() => {
 
   // GENERAL
   const debug = (() => {
-
     const folder = gui.addFolder('Debug').close()
 
-          folder
-            .add(debugObject,'axesHelper')
-            .onChange(enable => axesHelper({enable,helpers,scene}))
-            .name('Axis Helper')
+    folder
+      .add(debugObject, 'axesHelper')
+      .onChange((enable) => axesHelper({ enable, helpers, scene }))
+      .name('Axis Helper')
 
-          folder
-            .addColor(debugObject,'color')
-            .onChange(() => text.material.color.set(debugObject.color))
+    folder
+      .addColor(debugObject, 'color')
+      .onChange(() => text.material.color.set(debugObject.color))
 
-          folder
-            .add(debugObject,'rotationEnabled')
-            .onChange(enable => enable ? rotationSpeedController.show() : rotationSpeedController.hide())
+    folder
+      .add(debugObject, 'rotationEnabled')
+      .onChange((enable) =>
+        enable ? rotationSpeedController.show() : rotationSpeedController.hide()
+      )
 
-          const rotationSpeedController = (
-            folder
-              .add(defaultObject,'rotationSpeed')
-              .min(0)
-              .max(5)
-              .step(0.1)
-              .name('Rotation Speed')
-              .hide()
-          )
+    const rotationSpeedController = folder
+      .add(defaultObject, 'rotationSpeed')
+      .min(0)
+      .max(5)
+      .step(0.1)
+      .name('Rotation Speed')
+      .hide()
 
-          if (debugObject.rotationEnabled) rotationSpeedController.show()
+    if (debugObject.rotationEnabled) rotationSpeedController.show()
 
-          /*folder
-            .add(text.material,'wireframe')
-            .name('Wireframe')*/
+    folder.add(material, 'wireframe').name('Wireframe')
+  })()
+
+  // AMBIENT LIGHT
+  const ambientLightDebug = (() => {
+    const folder = gui.addFolder('Ambient Light')
+
+    folder
+      .addColor(ambientLight, 'color')
+      .name('Color')
+
+  })()
+
+  // POINT LIGHT
+  const pointLightDebug = (() => {
+    const folder = gui.addFolder('Point Light')
+
+    folder
+      .addColor(pointLight,'color')
+      .name('Color')
+
+    folder
+      .add(pointLight.position,'x')
+      .min(0)
+      .max(10)
+      .step(0.1)
+      .name('Position X')
+
+    folder
+      .add(pointLight.position,'y')
+      .min(0)
+      .max(10)
+      .step(0.1)
+      .name('Position Y')
+
+    folder
+      .add(pointLight.position,'z')
+      .min(2)
+      .max(10)
+      .step(0.1)
+      .name('Position Z')
 
   })()
 
@@ -191,10 +219,18 @@ axesHelper({
   scene,
 })
 
+/* INIT | Positioning */
+plane.rotation.x = - Math.PI * 0.5
+plane.position.y = - 0.65
+sphere.position.x = - 1.5
+torus.position.x = 1.5
+
 /* SCENE */
 scene.add(camera)
-scene.add(text)
-donuts.forEach(d => scene.add(d))
+scene.add(cube)
+scene.add(plane)
+scene.add(sphere)
+scene.add(torus)
 
 /* ANIMATE */
 function animate() {
@@ -204,7 +240,7 @@ function animate() {
   rotation({
     active: debugObject.rotationEnabled,
     elapsedTime,
-    meshes: [ text , ...donuts ],
+    meshes: [ cube , sphere , torus ],
     speed: defaultObject.rotationSpeed,
   })
 
