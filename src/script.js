@@ -3,48 +3,25 @@ import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
 import GUI from 'lil-gui'
 
 import {
+  defaultObject,
+  debugObject,
+  lights,
+} from './config'
+
+import {
   aspectRatio,
   axesHelper,
   fit,
   rotation,
   toggleCustomLights,
+  updateLightControllers,
 } from './api'
 
 /* INIT */
 const canvas = document.querySelector('canvas.webgl')
 const helpers = {}
-const lights = {}
+const lightsNames = [ 'point' , 'directional', 'hemisphere', 'rectarea' ]
 const scene = new THREE.Scene()
-
-/* SETTINGS | Default */
-const defaultObject = {
-
-  // Commons
-  color: '#cc17d9',
-
-  // Lights
-  ambientLight: {
-    params: [0xffffff,1.5],
-    position: [0, 0, 5],
-  },
-  lights: [ 'AmbientLight' , 'PointLight' ],
-  pointLight: {
-    params: [0xffffff, 50],
-    position: [0, 0, 5],
-  },
-
-  // Animation
-  rotationSpeed: 0.1,
-
-}
-
-/* SETTINGS | Debug */
-const debugObject = {
-  axesHelper: true,
-  color: defaultObject.color,
-  customLights: true,
-  rotationEnabled: false,
-}
 
 /* VARS */
 let sizes = fit()
@@ -54,9 +31,13 @@ const material = new THREE.MeshStandardMaterial()
       material.roughness = 0.4
 
 /* LIGHTS */
-const { ambientLight, pointLight } = toggleCustomLights(true,scene,defaultObject)
-lights.ambientLight = ambientLight
-lights.pointLight = pointLight
+lights.activations = lightsNames
+const lightsActivations = toggleCustomLights({
+  lights,
+  scene,
+  settings: defaultObject,
+})
+lights.light = { ...lightsActivations }
 
 /* OBJECTS */
 const cube = (new THREE.Mesh(
@@ -138,46 +119,51 @@ window.addEventListener('resize',e => {
 const gui = (() => {
 
   const gui = new GUI()
-        // gui.close()
+        gui.close()
         gui.hide()
 
   // GENERAL
   const debug = (() => {
 
-    const folder = gui.addFolder('Debug')
+    const folder = gui.addFolder('Debug').close()
 
     folder
       .add(debugObject, 'axesHelper')
       .onChange(enable => axesHelper({ enable, helpers, scene }))
       .name('Axis Helper')
 
+    material.color.set(debugObject.color)
     folder
       .addColor(debugObject, 'color')
-      .onChange(() => text.material.color.set(debugObject.color))
+      .onChange(() => material.color.set(debugObject.color))
+      .name('Color')
 
+    lights.controller = updateLightControllers('on',lights,gui)
     folder
       .add(debugObject,'customLights')
       .onChange(enable => {
         if (enable) {
 
-          const {
-            ambientLight,
-            pointLight,
-          } = toggleCustomLights(enable,scene,defaultObject)
+          const lightsActivations = toggleCustomLights({
+            scene,
+            lights: { ...lights, activations: lightsNames },
+            settings: defaultObject,
+          })
+          lights.light = { ...lightsActivations }
 
-          lights.ambientLight = ambientLight
-          lights.pointLight = pointLight
+          if (lightsActivations) updateLightControllers('on',lights,gui)
 
         }
         else {
-          toggleCustomLights(enable,scene,defaultObject)
+          toggleCustomLights({
+            scene,
+            lights: { ...lights , activations: [] },
+            settings: defaultObject,
+          })
+          updateLightControllers('off',{ ...lights, activations: lightsNames },gui)
         }
       })
       .name('Custom Lights')
-
-    folder
-      .add(debugObject, 'rotationEnabled')
-      .onChange(enable => enable ? rotationSpeedController.show() : rotationSpeedController.hide())
 
     const rotationSpeedController = (
       folder
@@ -188,55 +174,16 @@ const gui = (() => {
         .name('Rotation Speed')
         .hide()
     )
+    folder
+      .add(debugObject,'rotationEnabled')
+      .onChange(enable => enable ? rotationSpeedController.show() : rotationSpeedController.hide())
+      .name('Rotation Enabled')
 
     if (debugObject.rotationEnabled) rotationSpeedController.show()
 
     folder
       .add(material,'wireframe')
       .name('Wireframe')
-
-  })()
-
-  // AMBIENT LIGHT
-  const ambientLightDebug = (() => {
-    
-    const folder = gui.addFolder('Ambient Light')
-
-    folder
-      .addColor(lights.ambientLight,'color')
-      .name('Color')
-
-  })()
-
-  // POINT LIGHT
-  const pointLightDebug = (() => {
-
-    const folder = gui.addFolder('Point Light')
-
-    folder
-      .addColor(lights.pointLight,'color')
-      .name('Color')
-
-    folder
-      .add(lights.pointLight.position,'x')
-      .min(0)
-      .max(10)
-      .step(0.1)
-      .name('Position X')
-
-    folder
-      .add(lights.pointLight.position,'y')
-      .min(0)
-      .max(10)
-      .step(0.1)
-      .name('Position Y')
-
-    folder
-      .add(lights.pointLight.position,'z')
-      .min(2)
-      .max(10)
-      .step(0.1)
-      .name('Position Z')
 
   })()
 
