@@ -6,38 +6,43 @@ import {
   defaultObject,
   debugObject,
   lights,
-} from './config'
+  lightsNames,
+} from './config/'
 
 import {
   aspectRatio,
   axesHelper,
   fit,
   rotation,
+} from './utils/commons'
+
+import {
+  getLights,
   toggleCustomLights,
+  toggleLightsAndControllers,
   updateLightControllers,
-} from './api'
+} from './utils/lights'
 
 /* INIT */
 const canvas = document.querySelector('canvas.webgl')
 const helpers = {}
-const lightsNames = [ 'point' , 'directional', 'hemisphere', 'rectarea' ]
 const scene = new THREE.Scene()
 
 /* VARS */
 let sizes = fit()
 
 /* MATERIALS */
-const material = new THREE.MeshStandardMaterial()
-      material.roughness = 0.4
+const material = (() => {
+  const material = new THREE.MeshStandardMaterial()
+  material.roughness = 0.4
+  return material
+})()
 
 /* LIGHTS */
-lights.activations = lightsNames
-const lightsActivations = toggleCustomLights({
-  lights,
-  scene,
-  settings: defaultObject,
+const { directionalLight , pointLight } = getLights({
+  lights, lightsNames, scene,
+  config: defaultObject,
 })
-lights.light = { ...lightsActivations }
 
 /* OBJECTS */
 const cube = (new THREE.Mesh(
@@ -82,6 +87,8 @@ const renderer = (()=>{
   const renderer = new THREE.WebGLRenderer({canvas})
         renderer.setSize(sizes.width,sizes.height)
         renderer.setPixelRatio(Math.min(window.devicePixelRatio,2))
+        renderer.shadowMap.enabled = true
+        renderer.shadowMap.enabled = THREE.PCFSoftShadowMap
   return renderer
 })()
 
@@ -138,30 +145,19 @@ const gui = (() => {
       .onChange(() => material.color.set(debugObject.color))
       .name('Color')
 
-    lights.controller = updateLightControllers('on',lights,gui)
+    lights.controller = updateLightControllers('on',lights,gui)   
     folder
       .add(debugObject,'customLights')
       .onChange(enable => {
-        if (enable) {
 
-          const lightsActivations = toggleCustomLights({
-            scene,
-            lights: { ...lights, activations: lightsNames },
-            settings: defaultObject,
-          })
-          lights.light = { ...lightsActivations }
-
-          if (lightsActivations) updateLightControllers('on',lights,gui)
-
+        const settings = {
+          gui, lights, scene,
+          settings: defaultObject,
         }
-        else {
-          toggleCustomLights({
-            scene,
-            lights: { ...lights , activations: [] },
-            settings: defaultObject,
-          })
-          updateLightControllers('off',{ ...lights, activations: lightsNames },gui)
-        }
+
+        if (enable)  toggleLightsAndControllers({ ...settings, action: 'on' })
+        if (!enable) toggleLightsAndControllers({ ...settings, action: 'off' })
+
       })
       .name('Custom Lights')
 
@@ -203,6 +199,15 @@ plane.rotation.x = - Math.PI * 0.5
 plane.position.y = - 0.65
 sphere.position.x = - 1.5
 torus.position.x = 1.5
+
+/* INIT | SHADOWS */
+cube.castShadow = true
+cube.receiveShadow = true
+plane.receiveShadow = true
+sphere.castShadow = true
+sphere.receiveShadow = true
+torus.castShadow = true
+torus.receiveShadow = true
 
 /* SCENE */
 scene.add(camera)

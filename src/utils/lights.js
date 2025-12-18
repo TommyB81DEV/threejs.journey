@@ -1,35 +1,28 @@
 import * as THREE from 'three'
-import { FontLoader } from 'three/examples/jsm/loaders/FontLoader.js'
-import { TextGeometry } from 'three/examples/jsm/geometries/TextGeometry.js'
+
+import { lightsNames } from '../config'
 
 // SYNC
-export function aspectRatio(input) {
-  return input.width / input.height
-}
-export function axesHelper({enable,helpers,scene}) {
-  if (enable) {
-    helpers.axesHelper = new THREE.AxesHelper(5)
-    scene.add(helpers.axesHelper)
-  } else {
-    scene.remove(helpers.axesHelper)
-  }
-}
-export function fit() {
-  return { height: window.innerHeight, width: window.innerWidth }
-}
-export function rotation(params) {
+export function getLights(params) {
 
   const {
-    active,
-    elapsedTime,
-    meshes,
-    speed,
+    config,
+    lights,
+    lightsNames,
+    scene,
   } = params
 
-  for (const mesh of meshes) {
-    mesh.rotation.x = active ? - speed * elapsedTime : 0
-    mesh.rotation.y = active ? speed * elapsedTime : 0
-  }
+  lights.activations = lightsNames
+
+  const activations = toggleCustomLights({
+    lights: lights,
+    scene,
+    settings: config,
+  })
+
+  lights.light = { ...activations }
+
+  return lights.light
 
 }
 export function toggleCustomLights(params) {
@@ -48,61 +41,37 @@ export function toggleCustomLights(params) {
       switch (lightName) {
 
         case 'ambient':
-
-          const { ambientLight: alSettings } = settings
-          const { params: alParams } = alSettings
-
-          ambientLight = new THREE.AmbientLight(...alParams)
-
+          ambientLight = ambientLightSet(settings).light
           scene.add(ambientLight)
-
           break
 
         case 'directional':
 
-          const { directionalLight: dlSettings } = settings
-          const { params: dlParams, position: dlPosition } = dlSettings
-
-          directionalLight = new THREE.DirectionalLight(...dlParams)
-          directionalLight.position.set(...dlPosition)
+          directionalLight = directionalLightSet(settings).light         
+          directionalLight.helper = directionalLightSet(settings).helper
 
           scene.add(directionalLight)
+          scene.add(directionalLight.helper)
 
           break
 
         case 'hemisphere':
-
-          const { hemisphereLight: hlSettings } = settings
-          const { params: hlParams, position: hlPosition } = hlSettings
-
-          hemisphereLight = new THREE.HemisphereLight(...hlParams)
-          hemisphereLight.position.set(...hlPosition)
-
+          hemisphereLight = hemisphereLightSet(settings).light
           scene.add(hemisphereLight)
-
           break
 
         case 'rectarea':
-
-          const { rectAreaLight: ralSettings } = settings
-          const { params: ralParams, position: ralPosition } = ralSettings
-
-          rectAreaLight = new THREE.RectAreaLight(...ralParams)
-          rectAreaLight.position.set(...ralPosition)
-
+          rectAreaLight = rectAreaLightSet(settings).light
           scene.add(rectAreaLight)
-
           break
 
         case 'point':
 
-          const { pointLight: plSettings } = settings
-          const { params: plParams, position: plPosition } = plSettings
-
-          pointLight = new THREE.PointLight(...plParams)
-          pointLight.position.set(...plPosition)
+          pointLight = pointLightSet(settings).light
+          pointLight.helper = pointLightSet(settings).helper
 
           scene.add(pointLight)
+          scene.add(pointLight.helper)
 
           break
 
@@ -135,6 +104,34 @@ export function toggleCustomLights(params) {
     return null
 
   }
+
+}
+export function toggleLightsAndControllers(params) {
+
+  const {
+    action = 'off',
+    gui,
+    lights,
+    scene,
+    settings,
+  } = params
+
+  const activations = action === 'off' ? [] : lightsNames
+
+  const controllersLights = (
+    action === 'off'
+      ? { ...lights , activations: lightsNames }
+      : lights
+  )
+
+  const lightsActivations = toggleCustomLights({
+    scene, settings,
+    lights: { ...lights, activations },
+  })
+
+  lights.light = { ...lightsActivations }
+
+  updateLightControllers(action,controllersLights,gui)
 
 }
 export function updateLightControllers(action,lights,gui) {
@@ -348,4 +345,113 @@ export function updateLightControllers(action,lights,gui) {
     if (action === 'on') return lights.controller
 
   }
+}
+
+// Lights specific
+export function ambientLightSet(settings){
+
+  let light
+
+  // Settings
+  const { ambientLight: lightSettings } = settings
+  const { params: lightParams } = lightSettings
+
+  // Init
+  light = new THREE.AmbientLight(...lightParams)
+
+  return { light }
+
+}
+export function directionalLightSet(settings){
+
+  let helper
+  let light
+
+  // Settings
+  const { directionalLight: lightSettings } = settings
+  const { params: lightParams, position: lightPosition } = lightSettings
+
+  // Creation
+  light = new THREE.DirectionalLight(...lightParams)
+
+  // Position
+  light.position.set(...lightPosition)
+
+  // Configs
+  light.castShadow = true
+  light.shadow.camera.bottom = 10
+  light.shadow.camera.left = 10
+  light.shadow.camera.right = 10
+  light.shadow.camera.top = 10
+  light.shadow.camera.far = 8
+  light.shadow.camera.near = 2
+  light.shadow.mapSize.height = 1024
+  light.shadow.mapSize.width = 1024
+
+  helper = new THREE.CameraHelper(light.shadow.camera)
+
+  return { helper , light }
+
+}
+export function hemisphereLightSet(settings) {
+  
+  let light
+
+  // Settings
+  const { hemisphereLight: lightSettings } = settings
+  const { params: lightParams, position: lightPosition } = lightSettings
+
+  // Init
+  light = new THREE.HemisphereLight(...lightParams)
+
+  // Position
+  light.position.set(...lightPosition)
+
+  return { light }
+
+}
+export function pointLightSet(settings) {
+  
+  let helper
+  let light
+
+  // Settings
+  const { pointLight: lightSettings } = settings
+  const { params: lightParams, position: lightPosition } = lightSettings
+
+  // Creation
+  light = new THREE.PointLight(...lightParams)
+
+  // Position
+  light.position.set(...lightPosition)
+
+  // Configs
+  light.castShadow = true
+  light.shadow.camera.far = 10
+  light.shadow.camera.near = 4
+  light.shadow.mapSize.height = 2000
+  light.shadow.mapSize.width = 2000
+  light.shadow.radius = 1
+
+  helper = new THREE.CameraHelper(light.shadow.camera)
+
+  return { helper , light }
+
+}
+export function rectAreaLightSet(settings) {
+
+  let light
+
+  // Settings
+  const { rectAreaLight: lightSettings } = settings
+  const { params: lightParams, position: lightPosition } = lightSettings
+
+  // Init
+  light = new THREE.RectAreaLight(...lightParams)
+
+  // Position
+  light.position.set(...lightPosition)  
+
+  return { light }
+
 }

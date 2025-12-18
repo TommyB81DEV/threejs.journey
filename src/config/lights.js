@@ -1,43 +1,27 @@
-const defaultObject = {
-
-  // Commons
-  color: '#cc17d9',
-
-  // Lights
+export const config = {
   ambientLight: {
-    params: [ 0xffffff , 1.5 ],
-    position: [ 0 , 0 , 5 ],
+    params: [0xffffff, 1.5],
+    position: [0, 0, 5],
   },
   directionalLight: {
-    params: [ 0x00fffc , 0.9 ],
-    position: [ 1 , 0.25 , 0 ],
+    params: [0x000000, 0.9],
+    position: [5, 0, 0],
   },
   hemisphereLight: {
-    params: [ 0xff0000 , 0x0000ff, 0.3 ],
-    position: [ 1 , 0.25 , 0 ],
+    params: [0xff0000, 0x0000ff, 0.3],
+    position: [1, 0.25, 0],
   },
   rectAreaLight: {
-    params: [ 0x36f900ff , 2 , 1 , 1 ] ,
-    position: [ 0 , 0 , 3 ],
+    params: [0x36f900ff, 2, 1, 1],
+    position: [0, 0, 3],
   },
   pointLight: {
-    params: [ 0xffffff , 50 ],
-    position: [ 0 , 0 , 5 ],
+    params: [0xffffff, 50],
+    position: [0, 3.3, 5.9],
   },
-
-  // Animation
-  rotationSpeed: 0.1,
-
 }
 
-const debugObject = {
-  axesHelper: true,
-  color: defaultObject.color,
-  customLights: true,
-  rotationEnabled: false,
-}
-
-const lights = {
+export const defaultSettings = {
   activations: [],
   controller: {
 
@@ -83,8 +67,10 @@ const lights = {
   },
 }
 
-export {
-  defaultObject,
-  debugObject,
-  lights,
-}
+export const lightsNames = [
+  // 'ambient',
+  'directional',
+  'hemisphere',
+  'point',
+  'rectarea',
+]
