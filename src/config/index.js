@@ -1,19 +1,31 @@
 import {
-  config as lightsConfig,
-  defaultSettings as lights,
+  defaultSettings as lightsConfig,
+  resetSettings as lights,
   lightsNames,
+  useBakedShadows,
+  useNativeShadows,
+  useSimpleShadow,
 } from './lights'
+
+import {
+  defaultSettings as objectsConfig,
+  resetSettings as objects,
+  objectsNames,
+} from './objects.js'
 
 const defaultObject = {
 
   // Commons
-  color: '#cc17d9',
+  color: '#FFFFFF',
+
+  // Animation
+  rotationSpeed: 0.1,
 
   // Lights
   ...lightsConfig,
 
-  // Animation
-  rotationSpeed: 0.1,
+  // Objects
+  ...objectsConfig,
 
 }
 
@@ -29,4 +41,9 @@ export {
   debugObject,
   lights,
   lightsNames,
+  objects,
+  objectsNames,
+  useBakedShadows,
+  useNativeShadows,
+  useSimpleShadow,
 }
