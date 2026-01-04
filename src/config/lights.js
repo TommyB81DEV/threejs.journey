@@ -1,34 +1,66 @@
-export const config = {
+export const useNativeShadows = false
+export const useBakedShadows = useNativeShadows ? false : false
+export const useSimpleShadow = useNativeShadows ? false : true
+
+export const defaultSettings = {
   ambientLight: {
-    params: [0xffffff, 1.5],
-    position: [0, 0, 5],
+    params: [ 0xffffff , 0 ],
   },
   directionalLight: {
-    params: [0x000000, 0.9],
-    position: [5, 0, 0],
+    amplitude: [ 5 , 5 , -5 , - 5],
+    far: 8,
+    helper: { visible: false },
+    mapSize: [ 1024 , 1024 ],
+    near: 2,
+    params: [ 0xffffff , 1 ],
+    position: [ 0 , 0 , 5 ],
+    radius: 5,
   },
   hemisphereLight: {
     params: [0xff0000, 0x0000ff, 0.3],
     position: [1, 0.25, 0],
   },
   rectAreaLight: {
-    params: [0x36f900ff, 2, 1, 1],
+    params: [ 0xffffff , 2 , 1 , 1 ],
     position: [0, 0, 3],
   },
   pointLight: {
-    params: [0xffffff, 50],
-    position: [0, 3.3, 5.9],
+    far: 10,
+    helper: { visible: false },
+    mapSize: [ 1024 , 1024 ],
+    near: 0.5,
+    params: [ 0xff00ff , 5 ],
+    position: [ -2 , 0.5 , -2 ],
+  },
+  spotLight: {
+    far: 7,
+    helper: { visible: false },
+    mapSize: [ 1024 , 1024 ],
+    near: 1,
+    params: [ 0xae00ff , 40 , 10 , Math.PI*0.3 ],
+    position: [ 0 , 2 , 4 ],
   },
 }
 
-export const defaultSettings = {
+export const lightsNames = [
+  'ambient',
+  'directional',
+  // 'hemisphere',
+  'point',
+  // 'rectarea',
+  'spot',
+]
+
+export const resetSettings = {
   activations: [],
   controller: {
 
-    ambientLight: null,
+    ambientLightColor: null,
+    ambientLightIntensity: null,
 
     directionalLightColor: null,
     directionalLightIntensity: null,
+    directionalLightHelper: null,
 
     hemisphereLightColor: null,
     hemisphereLightGroundColor: null,
@@ -46,9 +78,15 @@ export const defaultSettings = {
     rectAreaLightZ: null,
 
     pointLightColor: null,
+    pointLightHelper: null,
+    pointLightIntensity: null,
     pointLightX: null,
     pointLightY: null,
     pointLightZ: null,
+
+    spotLightColor: null,
+    spotLightIntensity: null,
+    spotLightHelper: null,
 
   },
   folder: {
@@ -57,20 +95,7 @@ export const defaultSettings = {
     hemisphere: null,
     rectarea: null,
     point: null,
+    spot: null,
   },
-  light: {
-    ambientLight: null,
-    directionalLight: null,
-    hemisphereLight: null,
-    pointLight: null,
-    rectAreaLight: null,
-  },
+  light: Object.fromEntries(lightsNames.map(name => [ `${name}Light` , null ])),
 }
-
-export const lightsNames = [
-  // 'ambient',
-  'directional',
-  'hemisphere',
-  'point',
-  'rectarea',
-]

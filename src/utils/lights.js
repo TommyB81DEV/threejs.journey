@@ -1,6 +1,8 @@
 import * as THREE from 'three'
 
-import { lightsNames } from '../config'
+import {
+  lightsNames,
+} from '../config'
 
 // SYNC
 export function getLights(params) {
@@ -15,8 +17,7 @@ export function getLights(params) {
   lights.activations = lightsNames
 
   const activations = toggleCustomLights({
-    lights: lights,
-    scene,
+    lights, scene,
     settings: config,
   })
 
@@ -34,6 +35,7 @@ export function toggleCustomLights(params) {
   let hemisphereLight
   let pointLight
   let rectAreaLight
+  let spotLight
 
   if (lights.activations.length > 0) {   
 
@@ -47,11 +49,14 @@ export function toggleCustomLights(params) {
 
         case 'directional':
 
-          directionalLight = directionalLightSet(settings).light         
-          directionalLight.helper = directionalLightSet(settings).helper
+          const directionalLightObj = directionalLightSet(settings)
+
+          directionalLight = directionalLightObj.light
+          directionalLight.helper = directionalLightObj.helper
 
           scene.add(directionalLight)
           scene.add(directionalLight.helper)
+          scene.add(directionalLight.target)
 
           break
 
@@ -67,11 +72,25 @@ export function toggleCustomLights(params) {
 
         case 'point':
 
-          pointLight = pointLightSet(settings).light
-          pointLight.helper = pointLightSet(settings).helper
+          const pointLightObj = pointLightSet(settings)
+
+          pointLight = pointLightObj.light
+          pointLight.helper = pointLightObj.helper
 
           scene.add(pointLight)
           scene.add(pointLight.helper)
+
+          break
+
+        case 'spot':
+
+          const spotLightObj = spotLightSet(settings)
+
+          spotLight = spotLightObj.light
+          spotLight.helper = spotLightObj.helper
+
+          scene.add(spotLight)
+          scene.add(spotLight.helper)
 
           break
 
@@ -84,6 +103,7 @@ export function toggleCustomLights(params) {
       hemisphereLight,
       rectAreaLight,
       pointLight,
+      spotLight,
     }
 
   }
@@ -91,13 +111,13 @@ export function toggleCustomLights(params) {
 
     const lightsToRemove = []
 
-    scene.traverse((child) => {
+    scene.traverse(child => {
       if (child instanceof THREE.Light && child.type != 'PointLight') {
         lightsToRemove.push(child)
       }
     })
 
-    lightsToRemove.forEach((light) => {
+    lightsToRemove.forEach(light => {
       scene.remove(light)
     })
 
@@ -140,6 +160,35 @@ export function updateLightControllers(action,lights,gui) {
     for (const lightName of lights.activations) {
       switch (lightName) {
 
+        case 'ambient':
+
+          if (lights.folder.ambient && action === 'off') {
+            lights.folder.ambient.destroy()
+          }
+
+          if (action === 'on') {
+
+            lights.folder.ambient = gui.addFolder('Ambient Light').close()
+
+            lights.controller.ambientLightColor = (
+              lights.folder.ambient
+                .addColor(lights.light.ambientLight,'color')
+                .name('Color')
+            )
+
+            lights.controller.ambientLightIntensity = (
+              lights.folder.ambient
+                .add(lights.light.ambientLight,'intensity')
+                .min(0)
+                .max(10)
+                .step(0.0001)
+                .name('Intensity')
+            )
+
+          }
+
+          break
+
         case 'directional':
 
           if (lights.folder.directional && action === 'off') {
@@ -163,6 +212,12 @@ export function updateLightControllers(action,lights,gui) {
                 .max(5)
                 .step(0.0001)
                 .name('DirectionalLight Intensity')
+            )
+
+            lights.controller.directionalLightHelper = (
+              lights.folder.directional
+                .add(lights.light.directionalLight.helper,'visible')
+                .name('Helper')
             )
 
           }
@@ -237,30 +292,54 @@ export function updateLightControllers(action,lights,gui) {
 
             lights.folder.point = gui.addFolder('Point Light').close()
 
-            lights.controller.pointLightColor = lights.folder.point
-              .addColor(lights.light.pointLight, 'color')
-              .name('Color')
+            lights.controller.pointLightColor = (
+              lights.folder.point
+                .addColor(lights.light.pointLight, 'color')
+                .name('Color')
+            )
 
-            lights.controller.pointLightX = lights.folder.point
-              .add(lights.light.pointLight.position, 'x')
-              .min(0)
-              .max(10)
-              .step(0.1)
-              .name('Position X')
+            lights.controller.pointLightIntensity = (
+              lights.folder.point
+                .add(lights.light.pointLight,'intensity')
+                .min(0)
+                .max(50)
+                .step(0.0001)
+                .name('Intensity')
+            )
 
-            lights.controller.pointLightY = lights.folder.point
-              .add(lights.light.pointLight.position, 'y')
-              .min(0)
-              .max(10)
-              .step(0.1)
-              .name('Position Y')
+            lights.controller.pointLightIHelper = (
+              lights.folder.point
+                .add(lights.light.pointLight.helper,'visible')
+                .name('Helper')
+            )
 
-            lights.controller.pointLightZ = lights.folder.point
-              .add(lights.light.pointLight.position, 'z')
-              .min(2)
-              .max(10)
-              .step(0.1)
-              .name('Position Z')
+            lights.controller.pointLightX = (
+                lights.folder.point
+                  .add(lights.light.pointLight.position, 'x')
+                  .min(0)
+                  .max(10)
+                  .step(0.1)
+                  .name('Position X')
+            )
+
+            lights.controller.pointLightY = (
+              lights.folder.point
+                .add(lights.light.pointLight.position, 'y')
+                .min(0)
+                .max(10)
+                .step(0.1)
+                .name('Position Y')
+            )
+
+            lights.controller.pointLightZ = (
+              lights.folder.point
+                .add(lights.light.pointLight.position, 'z')
+                .min(2)
+                .max(10)
+                .step(0.1)
+                .name('Position Z')
+            )
+
           }
 
           break
@@ -273,7 +352,7 @@ export function updateLightControllers(action,lights,gui) {
 
           if (action === 'on') {
             
-            lights.folder.rectarea = gui.addFolder('React Arera Light').close()
+            lights.folder.rectarea = gui.addFolder('React Area Light').close()
   
             lights.controller.rectAreaLightColor = (
               lights.folder.rectarea
@@ -339,6 +418,41 @@ export function updateLightControllers(action,lights,gui) {
 
           break
 
+        case 'spot':
+
+          if (lights.folder.spot && action === 'off') {
+            lights.folder.spot.destroy()
+          }
+
+          if (action === 'on') {
+
+            lights.folder.spot = gui.addFolder('Spot Light').close()
+
+            lights.controller.spotLightColor = (
+              lights.folder.spot
+                .addColor(lights.light.spotLight,'color')
+                .name('Color')
+            )
+
+            lights.controller.spotLightIntensity = (
+              lights.folder.spot
+                .add(lights.light.spotLight,'intensity')
+                .min(0)
+                .max(50)
+                .step(0.0001)
+                .name('intensity')
+            )
+
+            lights.controller.spotLightHelper = (
+              lights.folder.spot
+                .add(lights.light.spotLight.helper,'visible')
+                .name('Helper')
+            )
+
+          }
+
+          break
+
       }
     }
 
@@ -368,8 +482,15 @@ export function directionalLightSet(settings){
   let light
 
   // Settings
-  const { directionalLight: lightSettings } = settings
-  const { params: lightParams, position: lightPosition } = lightSettings
+  const { 
+    directionalLight: lightSettings,
+  } = settings
+  const {
+    amplitude , far , mapSize , near , radius ,
+    helper: helperConfig,
+    params: lightParams,
+    position: lightPosition,
+  } = lightSettings
 
   // Creation
   light = new THREE.DirectionalLight(...lightParams)
@@ -379,16 +500,18 @@ export function directionalLightSet(settings){
 
   // Configs
   light.castShadow = true
-  light.shadow.camera.bottom = 10
-  light.shadow.camera.left = 10
-  light.shadow.camera.right = 10
-  light.shadow.camera.top = 10
-  light.shadow.camera.far = 8
-  light.shadow.camera.near = 2
-  light.shadow.mapSize.height = 1024
-  light.shadow.mapSize.width = 1024
+  light.shadow.camera.bottom = amplitude[2]
+  light.shadow.camera.left = amplitude[3]
+  light.shadow.camera.right = amplitude[1]
+  light.shadow.camera.top = amplitude[0]
+  light.shadow.camera.far = far
+  light.shadow.camera.near = near
+  light.shadow.mapSize.height = mapSize[0]
+  light.shadow.mapSize.width = mapSize[1]
+  light.shadow.radius = radius
 
   helper = new THREE.CameraHelper(light.shadow.camera)
+  helper.visible = helperConfig.visible
 
   return { helper , light }
 
@@ -416,8 +539,15 @@ export function pointLightSet(settings) {
   let light
 
   // Settings
-  const { pointLight: lightSettings } = settings
-  const { params: lightParams, position: lightPosition } = lightSettings
+  const {
+    pointLight: lightSettings,
+  } = settings
+  const { 
+    far, mapSize, near,
+    helper: helperConfig,
+    params: lightParams,
+    position: lightPosition,
+  } = lightSettings
 
   // Creation
   light = new THREE.PointLight(...lightParams)
@@ -427,13 +557,13 @@ export function pointLightSet(settings) {
 
   // Configs
   light.castShadow = true
-  light.shadow.camera.far = 10
-  light.shadow.camera.near = 4
-  light.shadow.mapSize.height = 2000
-  light.shadow.mapSize.width = 2000
-  light.shadow.radius = 1
+  light.shadow.camera.far = far
+  light.shadow.camera.near = near
+  light.shadow.mapSize.height = mapSize[0]
+  light.shadow.mapSize.width = mapSize[1]
 
   helper = new THREE.CameraHelper(light.shadow.camera)
+  helper.visible = helperConfig.visible
 
   return { helper , light }
 
@@ -453,5 +583,40 @@ export function rectAreaLightSet(settings) {
   light.position.set(...lightPosition)  
 
   return { light }
+
+}
+export function spotLightSet(settings){
+
+  let helper
+  let light
+
+  // Settings
+  const { 
+    spotLight: lightSettings,
+  } = settings
+  const {
+    far, mapSize, near,
+    helper: helperConfig,
+    params: lightParams,
+    position: lightPosition,
+  } = lightSettings
+
+  // Creation
+  light = new THREE.SpotLight(...lightParams)
+
+  // Position
+  light.position.set(...lightPosition)
+
+  // Configs
+  light.castShadow = true
+  light.shadow.mapSize.height = mapSize[0]
+  light.shadow.mapSize.width = mapSize[1]
+  light.shadow.camera.far = far
+  light.shadow.camera.near = near
+
+  helper = new THREE.CameraHelper(light.shadow.camera)
+  helper.visible = helperConfig.visible
+
+  return { helper , light }
 
 }

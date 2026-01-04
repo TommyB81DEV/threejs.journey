@@ -4,13 +4,22 @@ import * as THREE from 'three'
 export function aspectRatio(input) {
   return input.width / input.height
 }
-export function axesHelper({enable,helpers,scene}) {
+export function axesHelper(params) {
+
+  const { colors , enable , helpers , scene } = params
+
   if (enable) {
     helpers.axesHelper = new THREE.AxesHelper(5)
     scene.add(helpers.axesHelper)
-  } else {
+  }
+  else {
     scene.remove(helpers.axesHelper)
   }
+
+  if (colors) {
+    helpers.axesHelper.setColors(...colors)
+  }
+
 }
 export function fit() {
   return { height: window.innerHeight, width: window.innerWidth }

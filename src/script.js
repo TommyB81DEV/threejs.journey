@@ -7,6 +7,11 @@ import {
   debugObject,
   lights,
   lightsNames,
+  objects,
+  objectsNames,
+  useBakedShadows,
+  useNativeShadows,
+  useSimpleShadow,
 } from './config/'
 
 import {
@@ -18,15 +23,22 @@ import {
 
 import {
   getLights,
-  toggleCustomLights,
   toggleLightsAndControllers,
   updateLightControllers,
 } from './utils/lights'
+
+import {
+  bounceShadow,
+  getObjects,
+} from './utils/objects'
 
 /* INIT */
 const canvas = document.querySelector('canvas.webgl')
 const helpers = {}
 const scene = new THREE.Scene()
+
+/* FLAGS */
+const showGUI = true
 
 /* VARS */
 let sizes = fit()
@@ -34,52 +46,43 @@ let sizes = fit()
 /* MATERIALS */
 const material = (() => {
   const material = new THREE.MeshStandardMaterial()
-  material.roughness = 0.4
+  material.roughness = 0.7
   return material
 })()
 
 /* LIGHTS */
-const { directionalLight , pointLight } = getLights({
+getLights({
   lights, lightsNames, scene,
   config: defaultObject,
 })
 
 /* OBJECTS */
-const cube = (new THREE.Mesh(
-  new THREE.BoxGeometry(0.75, 0.75, 0.75),
-  material
-))
-const plane = (new THREE.Mesh(
-  new THREE.PlaneGeometry(5,5),
-  material
-))
-const sphere = (new THREE.Mesh(
-  new THREE.SphereGeometry(0.5, 32, 32),
-  material
-))
-const torus = (new THREE.Mesh(
-  new THREE.TorusGeometry(0.3, 0.2, 32, 64),
-  material
-))
+const { cube , plane , sphere , sphereSimpleShadow, torus } = getObjects({
+  material, objects, objectsNames, scene,
+  config: defaultObject,
+})
 
 /* CLOCK */
 const clock = new THREE.Clock()
 
-/* CAMERA | Init */
-const camera = (()=>{
+/* CAMERA */
+const { camera , cameraControls } = (()=>{
+
+  const lookAtPosition = useSimpleShadow ? sphere.position : cube.position
+
   const camera = new THREE.PerspectiveCamera(45, aspectRatio(sizes) , 0.1 , 100)
         camera.position.x = 6
         camera.position.y = 6
         camera.position.z = 6
-        camera.lookAt(cube.position)
-  return camera
-})()
+        camera.lookAt(lookAtPosition)
 
-/* CAMERA | Controls */
-const controls = (()=>{
-  const controls = new OrbitControls( camera , canvas )
-        controls.enableDamping = true
-  return controls
+  scene.add(camera)
+
+  const cameraControls = new OrbitControls( camera , canvas )
+        cameraControls.enableDamping = true
+
+  return { camera , cameraControls }
+
 })()
 
 /* RENDERER */
@@ -87,18 +90,10 @@ const renderer = (()=>{
   const renderer = new THREE.WebGLRenderer({canvas})
         renderer.setSize(sizes.width,sizes.height)
         renderer.setPixelRatio(Math.min(window.devicePixelRatio,2))
-        renderer.shadowMap.enabled = true
-        renderer.shadowMap.enabled = THREE.PCFSoftShadowMap
+        renderer.shadowMap.enabled = useNativeShadows
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap
   return renderer
 })()
-
-/* EVENT | Debugger */
-window.addEventListener('keydown',e => {
-  if (e.key === 'h') {
-    if (gui._hidden) gui.show()
-    else gui.hide()
-  }
-})
 
 /* EVENT | Full Screen */
 window.addEventListener('dblclick',e => {
@@ -122,113 +117,141 @@ window.addEventListener('resize',e => {
 
 })
 
-/* DEBUG */
-const gui = (() => {
+/* GUI */
+if (showGUI) {
 
-  const gui = new GUI()
-        gui.close()
-        gui.hide()
+  /* EVENT | GUi Toggler */
+  window.addEventListener('keydown',e => {
+    if (e.key === 'h') {
+      if (gui._hidden) gui.show()
+      else gui.hide()
+    }
+  })
 
-  // GENERAL
-  const debug = (() => {
+  /* DEBUG */
+  const gui = (() => {
 
-    const folder = gui.addFolder('Debug').close()
+    const gui = new GUI()
+          gui.close()
+          gui.hide()
 
-    folder
-      .add(debugObject, 'axesHelper')
-      .onChange(enable => axesHelper({ enable, helpers, scene }))
-      .name('Axis Helper')
+    // GENERAL
+    const debug = (() => {
 
-    material.color.set(debugObject.color)
-    folder
-      .addColor(debugObject, 'color')
-      .onChange(() => material.color.set(debugObject.color))
-      .name('Color')
+      const folder = gui.addFolder('Debug').close()
 
-    lights.controller = updateLightControllers('on',lights,gui)   
-    folder
-      .add(debugObject,'customLights')
-      .onChange(enable => {
-
-        const settings = {
-          gui, lights, scene,
-          settings: defaultObject,
-        }
-
-        if (enable)  toggleLightsAndControllers({ ...settings, action: 'on' })
-        if (!enable) toggleLightsAndControllers({ ...settings, action: 'off' })
-
-      })
-      .name('Custom Lights')
-
-    const rotationSpeedController = (
       folder
-        .add(defaultObject, 'rotationSpeed')
-        .min(0)
-        .max(5)
-        .step(0.1)
-        .name('Rotation Speed')
-        .hide()
-    )
-    folder
-      .add(debugObject,'rotationEnabled')
-      .onChange(enable => enable ? rotationSpeedController.show() : rotationSpeedController.hide())
-      .name('Rotation Enabled')
+        .add(debugObject, 'axesHelper')
+        .onChange(enable => axesHelper({ enable, helpers, scene }))
+        .name('Axis Helper')
 
-    if (debugObject.rotationEnabled) rotationSpeedController.show()
+      material.color.set(debugObject.color)
+      folder
+        .addColor(debugObject, 'color')
+        .onChange(() => material.color.set(debugObject.color))
+        .name('Color')
 
-    folder
-      .add(material,'wireframe')
-      .name('Wireframe')
+      lights.controller = updateLightControllers('on',lights,gui)   
+      folder
+        .add(debugObject,'customLights')
+        .onChange(enable => {
+
+          const settings = {
+            gui, lights, scene,
+            settings: defaultObject,
+          }
+
+          if (enable)  toggleLightsAndControllers({ ...settings, action: 'on' })
+          if (!enable) toggleLightsAndControllers({ ...settings, action: 'off' })
+
+        })
+        .name('Custom Lights')
+
+      const rotationSpeedController = (
+        folder
+          .add(defaultObject, 'rotationSpeed')
+          .min(0)
+          .max(5)
+          .step(0.1)
+          .name('Rotation Speed')
+          .hide()
+      )
+      folder
+        .add(debugObject,'rotationEnabled')
+        .onChange(enable => enable ? rotationSpeedController.show() : rotationSpeedController.hide())
+        .name('Rotation Enabled')
+
+      if (debugObject.rotationEnabled) rotationSpeedController.show()
+
+      folder
+        .add(material,'wireframe')
+        .name('Wireframe')
+
+    })()
+
+    return gui
 
   })()
 
-  return gui
-
-})()
+}
 
 /* HELPERS */
 axesHelper({ 
+  helpers, scene,
   enable: debugObject.axesHelper,
-  helpers,
-  scene,
 })
 
-/* INIT | Positioning */
-plane.rotation.x = - Math.PI * 0.5
-plane.position.y = - 0.65
-sphere.position.x = - 1.5
-torus.position.x = 1.5
-
 /* INIT | SHADOWS */
-cube.castShadow = true
-cube.receiveShadow = true
-plane.receiveShadow = true
-sphere.castShadow = true
-sphere.receiveShadow = true
-torus.castShadow = true
-torus.receiveShadow = true
+const shadows = (() => {
 
-/* SCENE */
-scene.add(camera)
-scene.add(cube)
-scene.add(plane)
-scene.add(sphere)
-scene.add(torus)
+  let bakedShadow = false
+
+  if(useBakedShadows) {
+
+    const textureLoader = new THREE.TextureLoader()
+
+    bakedShadow = textureLoader.load('/textures/bakedShadow.jpg')
+    bakedShadow.colorSpace = THREE.SRGBColorSpace
+
+    plane.material = new THREE.MeshBasicMaterial({ map: bakedShadow })
+
+  } 
+
+  if (useNativeShadows) {
+    cube.castShadow = true
+    cube.receiveShadow = true
+    plane.receiveShadow = true
+    sphere.castShadow = true
+    sphere.receiveShadow = true
+    torus.castShadow = true
+    torus.receiveShadow = true
+  }
+
+  return { bakedShadow }
+
+})()
 
 /* ANIMATE */
 function animate() {
 
   const elapsedTime = clock.getElapsedTime()
 
+  if (useSimpleShadow) {
+    bounceShadow({
+      elapsedTime,
+      object: sphere,
+      shadow: sphereSimpleShadow,
+    })
+  }
+
   rotation({
     active: debugObject.rotationEnabled,
     elapsedTime,
-    meshes: [ cube , sphere , torus ],
+    meshes: useSimpleShadow ? [ sphere ] : [ cube , sphere , torus ],
     speed: defaultObject.rotationSpeed,
   })
 
-  controls.update()
+  cameraControls.update()
 
   renderer.render(scene,camera)
   window.requestAnimationFrame(animate)
