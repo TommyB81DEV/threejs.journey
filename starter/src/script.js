@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { Timer } from 'three/addons/misc/Timer.js'
 import GUI from 'lil-gui'
 
 /**
@@ -15,46 +16,26 @@ const canvas = document.querySelector('canvas.webgl')
 const scene = new THREE.Scene()
 
 /**
+ * House
+ */
+// Temporary sphere
+const sphere = (new THREE.Mesh(
+  new THREE.SphereGeometry(1, 32, 32),
+  new THREE.MeshStandardMaterial({ roughness: 0.7 })
+))
+scene.add(sphere)
+
+/**
  * Lights
  */
 // Ambient light
-const ambientLight = new THREE.AmbientLight(0xffffff, 1)
-gui.add(ambientLight, 'intensity').min(0).max(3).step(0.001)
+const ambientLight = new THREE.AmbientLight('#ffffff', 0.5)
 scene.add(ambientLight)
 
 // Directional light
-const directionalLight = new THREE.DirectionalLight(0xffffff, 1.5)
-directionalLight.position.set(2, 2, - 1)
-gui.add(directionalLight, 'intensity').min(0).max(3).step(0.001)
-gui.add(directionalLight.position, 'x').min(- 5).max(5).step(0.001)
-gui.add(directionalLight.position, 'y').min(- 5).max(5).step(0.001)
-gui.add(directionalLight.position, 'z').min(- 5).max(5).step(0.001)
+const directionalLight = new THREE.DirectionalLight('#ffffff', 1.5)
+directionalLight.position.set(3, 2, -8)
 scene.add(directionalLight)
-
-/**
- * Materials
- */
-const material = new THREE.MeshStandardMaterial()
-material.roughness = 0.7
-gui.add(material, 'metalness').min(0).max(1).step(0.001)
-gui.add(material, 'roughness').min(0).max(1).step(0.001)
-
-/**
- * Objects
- */
-const sphere = new THREE.Mesh(
-  new THREE.SphereGeometry(0.5, 32, 32),
-  material
-)
-
-const plane = new THREE.Mesh(
-  new THREE.PlaneGeometry(5, 5),
-  material
-)
-plane.rotation.x = - Math.PI * 0.5
-plane.position.y = - 0.5
-
-scene.add(sphere, plane)
 
 /**
  * Sizes
@@ -84,9 +65,9 @@ window.addEventListener('resize', () =>
  */
 // Base camera
 const camera = new THREE.PerspectiveCamera(75, sizes.width / sizes.height, 0.1, 100)
-camera.position.x = 1
-camera.position.y = 1
-camera.position.z = 2
+camera.position.x = 4
+camera.position.y = 2
+camera.position.z = 5
 scene.add(camera)
 
 // Controls
@@ -105,11 +86,13 @@ renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2))
 /**
  * Animate
  */
-const clock = new THREE.Clock()
+const timer = new Timer()
 
 const tick = () =>
 {
-    const elapsedTime = clock.getElapsedTime()
+    // Timer
+    timer.update()
+    const elapsedTime = timer.getElapsed()
 
     // Update controls
     controls.update()

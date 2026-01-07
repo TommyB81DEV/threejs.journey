@@ -1,20 +1,19 @@
-export const useNativeShadows = false
+export const useNativeShadows = true
 export const useBakedShadows = useNativeShadows ? false : false
-export const useSimpleShadow = useNativeShadows ? false : true
+export const useSimpleShadow = useNativeShadows ? false : false
 
 export const defaultSettings = {
   ambientLight: {
-    params: [ 0xffffff , 0 ],
+    params: [ 0xffffff , 0.5 ],
   },
   directionalLight: {
-    amplitude: [ 5 , 5 , -5 , - 5],
-    far: 8,
+    amplitude: [ 8 , 8 , -8 , - 8],
+    far: 20,
     helper: { visible: false },
-    mapSize: [ 1024 , 1024 ],
-    near: 2,
-    params: [ 0xffffff , 1 ],
-    position: [ 0 , 0 , 5 ],
-    radius: 5,
+    mapSize: [ 256 , 256 ],
+    near: 1,
+    params: [ 0x86cdff , 1.5 ],
+    position: [ 3 , 2 , -8 ],
   },
   hemisphereLight: {
     params: [0xff0000, 0x0000ff, 0.3],
@@ -42,16 +41,16 @@ export const defaultSettings = {
   },
 }
 
-export const lightsNames = [
+export const list = [
   'ambient',
   'directional',
   // 'hemisphere',
-  'point',
+  // 'point',
   // 'rectarea',
-  'spot',
+  // 'spot',
 ]
 
-export const resetSettings = {
+export const reset = {
   activations: [],
   controller: {
 
@@ -97,5 +96,6 @@ export const resetSettings = {
     point: null,
     spot: null,
   },
-  light: Object.fromEntries(lightsNames.map(name => [ `${name}Light` , null ])),
+  light: Object.fromEntries(list.map(name => [ `${name}Light` , null ])),
+  list,
 }

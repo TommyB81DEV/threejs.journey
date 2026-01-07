@@ -1,7 +1,9 @@
 import * as THREE from 'three'
 
 import {
-  lightsNames,
+  camera,
+  defaultObject,
+  useNativeShadows,
 } from '../config'
 
 // SYNC
@@ -10,32 +12,32 @@ export function getLights(params) {
   const {
     config,
     lights,
-    lightsNames,
+    objects,
     scene,
   } = params
 
-  lights.activations = lightsNames
+  lights.activations = lights.list
 
   const activations = toggleCustomLights({
-    lights, scene,
+    lights, objects, scene,
     settings: config,
   })
 
   lights.light = { ...activations }
 
-  return lights.light
+  return lights
 
 }
 export function toggleCustomLights(params) {
 
-  const { lights , scene, settings } = params
+  const {
+    lights,
+    objects,
+    scene,
+    settings,
+  } = params
 
-  let ambientLight
-  let directionalLight
-  let hemisphereLight
-  let pointLight
-  let rectAreaLight
-  let spotLight
+  const lightsObjects = {}
 
   if (lights.activations.length > 0) {   
 
@@ -43,7 +45,8 @@ export function toggleCustomLights(params) {
       switch (lightName) {
 
         case 'ambient':
-          ambientLight = ambientLightSet(settings).light
+          const ambientLight = ambientLightSet(settings).light
+          lightsObjects['ambientLight'] = ambientLight
           scene.add(ambientLight)
           break
 
@@ -51,8 +54,10 @@ export function toggleCustomLights(params) {
 
           const directionalLightObj = directionalLightSet(settings)
 
-          directionalLight = directionalLightObj.light
-          directionalLight.helper = directionalLightObj.helper
+          const directionalLight = directionalLightObj.light
+                directionalLight.helper = directionalLightObj.helper
+
+          lightsObjects['directionalLight'] = directionalLight
 
           scene.add(directionalLight)
           scene.add(directionalLight.helper)
@@ -61,12 +66,14 @@ export function toggleCustomLights(params) {
           break
 
         case 'hemisphere':
-          hemisphereLight = hemisphereLightSet(settings).light
+          const hemisphereLight = hemisphereLightSet(settings).light
+          lightsObjects['hemisphereLight'] = hemisphereLight
           scene.add(hemisphereLight)
           break
 
         case 'rectarea':
-          rectAreaLight = rectAreaLightSet(settings).light
+          const rectAreaLight = rectAreaLightSet(settings).light
+          lightsObjects['rectAreaLight'] = rectAreaLight
           scene.add(rectAreaLight)
           break
 
@@ -74,8 +81,10 @@ export function toggleCustomLights(params) {
 
           const pointLightObj = pointLightSet(settings)
 
-          pointLight = pointLightObj.light
-          pointLight.helper = pointLightObj.helper
+          const pointLight = pointLightObj.light
+                pointLight.helper = pointLightObj.helper
+
+          lightsObjects['pointLight'] = pointLight
 
           scene.add(pointLight)
           scene.add(pointLight.helper)
@@ -86,8 +95,10 @@ export function toggleCustomLights(params) {
 
           const spotLightObj = spotLightSet(settings)
 
-          spotLight = spotLightObj.light
-          spotLight.helper = spotLightObj.helper
+          const spotLight = spotLightObj.light
+                spotLight.helper = spotLightObj.helper
+
+          lightsObjects['spotLight'] = spotLight
 
           scene.add(spotLight)
           scene.add(spotLight.helper)
@@ -97,14 +108,7 @@ export function toggleCustomLights(params) {
       }
     }
 
-    return {
-      ambientLight,
-      directionalLight,
-      hemisphereLight,
-      rectAreaLight,
-      pointLight,
-      spotLight,
-    }
+    return lightsObjects
 
   }
   else {
@@ -136,11 +140,11 @@ export function toggleLightsAndControllers(params) {
     settings,
   } = params
 
-  const activations = action === 'off' ? [] : lightsNames
+  const activations = action === 'off' ? [] : lights.list
 
   const controllersLights = (
     action === 'off'
-      ? { ...lights , activations: lightsNames }
+      ? { ...lights , activations: lights.list }
       : lights
   )
 
@@ -155,7 +159,7 @@ export function toggleLightsAndControllers(params) {
 
 }
 export function updateLightControllers(action,lights,gui) {
-  if (lights.activations.length >0){   
+  if (lights.activations.length > 0){   
 
     for (const lightName of lights.activations) {
       switch (lightName) {
@@ -499,16 +503,17 @@ export function directionalLightSet(settings){
   light.position.set(...lightPosition)
 
   // Configs
-  light.castShadow = true
-  light.shadow.camera.bottom = amplitude[2]
-  light.shadow.camera.left = amplitude[3]
-  light.shadow.camera.right = amplitude[1]
-  light.shadow.camera.top = amplitude[0]
-  light.shadow.camera.far = far
-  light.shadow.camera.near = near
-  light.shadow.mapSize.height = mapSize[0]
-  light.shadow.mapSize.width = mapSize[1]
-  light.shadow.radius = radius
+  if (useNativeShadows) {
+    light.castShadow = true
+    light.shadow.camera.bottom = amplitude[2]
+    light.shadow.camera.far = far
+    light.shadow.camera.left = amplitude[3]
+    light.shadow.camera.near = near
+    light.shadow.camera.right = amplitude[1]
+    light.shadow.camera.top = amplitude[0]
+    light.shadow.mapSize.height = mapSize[0]
+    light.shadow.mapSize.width = mapSize[1]
+  }
 
   helper = new THREE.CameraHelper(light.shadow.camera)
   helper.visible = helperConfig.visible
@@ -542,9 +547,12 @@ export function pointLightSet(settings) {
   const {
     pointLight: lightSettings,
   } = settings
+
   const { 
-    far, mapSize, near,
+    mapSize,
+    far = camera.default.perspective.far,
     helper: helperConfig,
+    near = camera.default.perspective.near,
     params: lightParams,
     position: lightPosition,
   } = lightSettings
@@ -554,7 +562,7 @@ export function pointLightSet(settings) {
 
   // Position
   light.position.set(...lightPosition)
-
+ 
   // Configs
   light.castShadow = true
   light.shadow.camera.far = far
@@ -567,6 +575,7 @@ export function pointLightSet(settings) {
 
   return { helper , light }
 
+}
 }
 export function rectAreaLightSet(settings) {
 

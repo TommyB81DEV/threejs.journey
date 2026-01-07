@@ -27,15 +27,25 @@ export function fit() {
 export function rotation(params) {
 
   const {
-    active,
+    active = false,
     elapsedTime,
     meshes,
     speed,
   } = params
 
-  for (const mesh of meshes) {
-    mesh.rotation.x = active ? - speed * elapsedTime : 0
-    mesh.rotation.y = active ? speed * elapsedTime : 0
+  if (active) {
+    for (const mesh of meshes) {
+      mesh.rotation.x = - speed * elapsedTime
+      mesh.rotation.y = speed * elapsedTime
+    }
   }
 
+}
+export function tileAndWrapTextures(textures) {
+  for (const [ texture , repeat, colorSpace ] of textures) {
+    texture.repeat.set(...repeat)
+    texture.wrapS = THREE.RepeatWrapping
+    texture.wrapT = THREE.RepeatWrapping
+    if (colorSpace) texture.colorSpace = colorSpace
+  }
 }

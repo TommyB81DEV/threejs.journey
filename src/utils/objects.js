@@ -1,7 +1,6 @@
 import * as THREE from 'three'
 
 import {
-  useBakedShadows,
   useSimpleShadow,
 } from '../config'
 
@@ -10,36 +9,38 @@ export function getObjects(params) {
 
   const {
     config,
-    material,
     objects,
-    objectsNames,
     scene,
   } = params
 
-  objects.activations = objectsNames
+  const materials = Object.fromEntries(
+    Object.entries(config)
+      .filter(([ key , val ]) => ( objects.list.includes(key)))
+      .map(([ key , val ]) => [ key , val.material ? val.material : config.material ])
+  )
 
-  const activations = toggleObjects({
-    material , objects, scene,
-    names: objectsNames,
+  objects.activations = objects.list
+
+  const meshes = toggleObjects({
+    materials , objects, scene,
     settings: config,
   })
 
-  objects.object = { ...activations }
+  objects.meshes = { ...meshes }
 
-  return objects.object
+  return objects
 
 }
 export function toggleObjects(params) {
 
   const {
-    material,
-    names,
+    materials,
     objects,
     scene,
     settings,
   } = params
 
-  const meshes = Object.fromEntries(names.map(name => [ name , null ]))
+  const meshes = {}
 
   if (objects.activations.length > 0) {   
 
@@ -47,21 +48,21 @@ export function toggleObjects(params) {
       switch (name) {
 
         case 'cube':
-          meshes.cube = cubeSet({ material , settings })
+          meshes.cube = cubeSet({ material: materials[name] , settings })
           scene.add(meshes.cube)
           break
 
         case 'plane':
-          meshes.plane = planeSet({ material , settings })
+          meshes.plane = planeSet({ material: materials[name], settings })
           scene.add(meshes.plane)
           break
 
         case 'sphere':
 
-          const sphere = sphereSet({ material , settings })
+          const sphere = sphereSet({ material: materials[name], settings })
 
           meshes.sphere = useSimpleShadow ? sphere.object : sphere
-          meshes.sphereSimpleShadow = useSimpleShadow ? sphere.shadow : null
+          if (useSimpleShadow) meshes.sphereSimpleShadow = sphere.shadow
 
           scene.add(meshes.sphere)
           if (useSimpleShadow) scene.add(sphere.shadow)
@@ -69,7 +70,7 @@ export function toggleObjects(params) {
           break
 
         case 'torus':
-          meshes.torus = torusSet({ material , settings })
+          meshes.torus = torusSet({ material: materials[name], settings })
           scene.add(meshes.torus)
           break
 
@@ -104,9 +105,9 @@ export function cubeSet(params){
 
   const { material , settings } = params
 
-  const object = new THREE.Mesh(
+  const object = (new THREE.Mesh(
     new THREE.BoxGeometry(...settings.cube.params),
-    material
+    material,)
   )
 
   object.position.set(...settings.cube.position)
@@ -119,16 +120,13 @@ export function planeSet(params){
 
   const { material , settings } = params
 
-  const object = new THREE.Mesh(
+  const object = (new THREE.Mesh(
     new THREE.PlaneGeometry(...settings.plane.params),
     material
-  )
+  ))
 
   object.rotation.x = settings.plane.rotation[0]
-
-  object.position.x = settings.plane.position[0]
-  object.position.y = settings.plane.position[1]
-  object.position.z = settings.plane.position[2]
+  object.position.set(0 , -0.65 , 0)
 
   return object
 
@@ -186,9 +184,9 @@ export function torusSet(params){
 
   const { material , settings } = params
 
-  const object = new THREE.Mesh(
+  const object = (new THREE.Mesh(
     new THREE.TorusGeometry(...settings.torus.params),
-    material
+    material)
   )
 
   object.position.set(...settings.torus.position)
@@ -202,6 +200,7 @@ export function torusSet(params){
 export function bounceShadow(params){
 
   const {
+    active = false,
     bounceMultiplier = 5,
     cosMultiplier = 1.7,
     sinMultiplier = 1.7,
@@ -210,12 +209,14 @@ export function bounceShadow(params){
     shadow,
   } = params
 
-  object.position.x = Math.cos(elapsedTime) * cosMultiplier
-  object.position.z = Math.sin(elapsedTime) * sinMultiplier
-  object.position.y = Math.abs(Math.cos(elapsedTime * bounceMultiplier))
-  
-  shadow.position.x = object.position.x
-  shadow.position.z = object.position.z
-  shadow.material.opacity = 1.5 - object.position.y
+  if (active) {
+    object.position.x = Math.cos(elapsedTime) * cosMultiplier
+    object.position.z = Math.sin(elapsedTime) * sinMultiplier
+    object.position.y = Math.abs(Math.cos(elapsedTime * bounceMultiplier))
+    
+    shadow.position.x = object.position.x
+    shadow.position.z = object.position.z
+    shadow.material.opacity = 1.5 - object.position.y
+  }
 
 }

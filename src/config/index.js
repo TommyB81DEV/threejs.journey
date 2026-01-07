@@ -1,7 +1,10 @@
 import {
+  camera,
+} from './cameras.js'
+
+import {
   defaultSettings as lightsConfig,
-  resetSettings as lights,
-  lightsNames,
+  reset as lightsReset,
   useBakedShadows,
   useNativeShadows,
   useSimpleShadow,
@@ -9,16 +12,19 @@ import {
 
 import {
   defaultSettings as objectsConfig,
-  resetSettings as objects,
-  objectsNames,
+  material,
+  reset as objectsReset,
 } from './objects.js'
+
+const rotationEnabled = false
+const showGui = true
 
 const defaultObject = {
 
   // Commons
   color: '#FFFFFF',
-
-  // Animation
+  material,
+  rotationEnabled,
   rotationSpeed: 0.1,
 
   // Lights
@@ -30,19 +36,20 @@ const defaultObject = {
 }
 
 const debugObject = {
-  axesHelper: true,
+  axesHelper: false,
   color: defaultObject.color,
   customLights: true,
-  rotationEnabled: false,
+  rotationEnabled,
 }
 
 export {
   defaultObject,
   debugObject,
-  lights,
-  lightsNames,
-  objects,
-  objectsNames,
+  lightsConfig,
+  lightsReset,
+  objectsConfig,
+  objectsReset,
+  showGui,
   useBakedShadows,
   useNativeShadows,
   useSimpleShadow,

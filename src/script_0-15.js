@@ -1,15 +1,14 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import { Timer } from 'three/src/core/Timer.js'
-
 import GUI from 'lil-gui'
 
 import {
   defaultObject,
   debugObject,
-  lightsReset,
-  objectsReset,
-  showGui,
+  lights,
+  lightsNames,
+  objects,
+  objectsNames,
   useBakedShadows,
   useNativeShadows,
   useSimpleShadow,
@@ -38,45 +37,43 @@ const canvas = document.querySelector('canvas.webgl')
 const helpers = {}
 const scene = new THREE.Scene()
 
+/* FLAGS */
+const showGUI = true
+
 /* VARS */
-let lights
-let objects
 let sizes = fit()
 
-/* TEXTURES */
-const textureLoader = new THREE.TextureLoader()
-
-/* OBJECTS */
-objects = getObjects({
-  scene,
-  config: defaultObject,
-  objects: objectsReset,
-})
+/* MATERIALS */
+const material = (() => {
+  const material = new THREE.MeshStandardMaterial()
+  material.roughness = 0.7
+  return material
+})()
 
 /* LIGHTS */
-lights = getLights({
-  objects , scene,
+getLights({
+  lights, lightsNames, scene,
   config: defaultObject,
-  lights: lightsReset,
+})
+
+/* OBJECTS */
+const { cube , plane , sphere , sphereSimpleShadow, torus } = getObjects({
+  material, objects, objectsNames, scene,
+  config: defaultObject,
 })
 
 /* CLOCK */
-const timer = new Timer()
-// const timer = new THREE.Clock()
+const clock = new THREE.Clock()
 
 /* CAMERA */
 const { camera , cameraControls } = (()=>{
 
-  const lookAtPosition = (
-    useSimpleShadow 
-      ? objects.meshes.house.position 
-      : objects.meshes.house.position
-  )
+  const lookAtPosition = useSimpleShadow ? sphere.position : cube.position
 
-  const camera = new THREE.PerspectiveCamera(75, aspectRatio(sizes) , 0.1 , 100)
-        camera.position.x = 4
-        camera.position.y = 2
-        camera.position.z = 5
+  const camera = new THREE.PerspectiveCamera(45, aspectRatio(sizes) , 0.1 , 100)
+        camera.position.x = 6
+        camera.position.y = 6
+        camera.position.z = 6
         camera.lookAt(lookAtPosition)
 
   scene.add(camera)
@@ -90,15 +87,12 @@ const { camera , cameraControls } = (()=>{
 
 /* RENDERER */
 const renderer = (()=>{
-
   const renderer = new THREE.WebGLRenderer({canvas})
         renderer.setSize(sizes.width,sizes.height)
         renderer.setPixelRatio(Math.min(window.devicePixelRatio,2))
-        renderer.shadowMap.enabled = true
-        renderer.shadowMap.type = THREE.PCFShadowMap
-
+        renderer.shadowMap.enabled = useNativeShadows
+        renderer.shadowMap.type = THREE.PCFSoftShadowMap
   return renderer
-
 })()
 
 /* EVENT | Full Screen */
@@ -124,11 +118,11 @@ window.addEventListener('resize',e => {
 })
 
 /* GUI */
-if (showGui) {
+if (showGUI) {
 
   /* EVENT | GUi Toggler */
   window.addEventListener('keydown',e => {
-    if (e.key === 'h') {    
+    if (e.key === 'h') {
       if (gui._hidden) gui.show()
       else gui.hide()
     }
@@ -151,6 +145,13 @@ if (showGui) {
         .onChange(enable => axesHelper({ enable, helpers, scene }))
         .name('Axis Helper')
 
+      material.color.set(debugObject.color)
+      folder
+        .addColor(debugObject, 'color')
+        .onChange(() => material.color.set(debugObject.color))
+        .name('Color')
+
+      lights.controller = updateLightControllers('on',lights,gui)   
       folder
         .add(debugObject,'customLights')
         .onChange(enable => {
@@ -182,12 +183,11 @@ if (showGui) {
 
       if (debugObject.rotationEnabled) rotationSpeedController.show()
 
-    })()
+      folder
+        .add(material,'wireframe')
+        .name('Wireframe')
 
-    const lightsDebug = (() => {
-      lights.controller = updateLightControllers('on', lights, gui)
     })()
-
 
     return gui
 
@@ -201,7 +201,7 @@ axesHelper({
   enable: debugObject.axesHelper,
 })
 
-/* SHADOWS */
+/* INIT | SHADOWS */
 const shadows = (() => {
 
   let bakedShadow = false
@@ -213,60 +213,46 @@ const shadows = (() => {
     bakedShadow = textureLoader.load('/textures/bakedShadow.jpg')
     bakedShadow.colorSpace = THREE.SRGBColorSpace
 
-    objects.meshes.floor.material = new THREE.MeshBasicMaterial({ map: bakedShadow })
+    plane.material = new THREE.MeshBasicMaterial({ map: bakedShadow })
 
+  } 
+
+  if (useNativeShadows) {
+    cube.castShadow = true
+    cube.receiveShadow = true
+    plane.receiveShadow = true
+    sphere.castShadow = true
+    sphere.receiveShadow = true
+    torus.castShadow = true
+    torus.receiveShadow = true
   }
 
-  if (useNativeShadows) {  
-    for (const [ name , _ ] of Object.entries(objects.meshes)) {
-      if (name === 'floor') {
-        objects.meshes[name].receiveShadow = true
-      }
-      else {
-        objects.meshes[name].castShadow = true
-        objects.meshes[name].receiveShadow = true
-      }
-    }
-  }
-
-  return bakedShadow ? { bakedShadow } : null
+  return { bakedShadow }
 
 })()
 
 /* ANIMATE */
 function animate() {
 
-  // Updates
-  cameraControls.update()
-  timer.update()
-  
-  // Constants
-  const elapsedTime = timer.getElapsed()
+  const elapsedTime = clock.getElapsedTime()
 
-  // Objects
-  const rotatingObjects = (
-    Object
-      .entries(objects.meshes)
-      .filter(([ name , mesh ]) => Boolean(mesh) && name != 'floor' )
-      .map(el => el[1])
-  )
-  
-  // Animations
-  bounceShadow({
-    active: useSimpleShadow,
-    elapsedTime,
-    object: objects.meshes.sphere,
-    shadow: objects.meshes.sphereSimpleShadow,
-  })
+  if (useSimpleShadow) {
+    bounceShadow({
+      elapsedTime,
+      object: sphere,
+      shadow: sphereSimpleShadow,
+    })
+  }
 
   rotation({
     active: debugObject.rotationEnabled,
     elapsedTime,
-    meshes: useSimpleShadow ? [ sphere ] : rotatingObjects,
+    meshes: useSimpleShadow ? [ sphere ] : [ cube , sphere , torus ],
     speed: defaultObject.rotationSpeed,
   })
 
-  // Render
+  cameraControls.update()
+
   renderer.render(scene,camera)
   window.requestAnimationFrame(animate)
 
