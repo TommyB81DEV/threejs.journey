@@ -1,5 +1,6 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
+import { Sky } from 'three/examples/jsm/objects/Sky.js'
 import { Timer } from 'three/src/core/Timer.js'
 
 import GUI from 'lil-gui'
@@ -23,7 +24,10 @@ import {
 } from './utils/commons'
 
 import {
+  getFog,
   getLights,
+  getSky,
+  randomlyRotatingLights,
   toggleLightsAndControllers,
   updateLightControllers,
 } from './utils/lights'
@@ -48,7 +52,7 @@ const textureLoader = new THREE.TextureLoader()
 
 /* OBJECTS */
 objects = getObjects({
-  scene,
+  scene, textureLoader,
   config: defaultObject,
   objects: objectsReset,
 })
@@ -62,7 +66,6 @@ lights = getLights({
 
 /* CLOCK */
 const timer = new Timer()
-// const timer = new THREE.Clock()
 
 /* CAMERA */
 const { camera , cameraControls } = (()=>{
@@ -188,10 +191,27 @@ if (showGui) {
       lights.controller = updateLightControllers('on', lights, gui)
     })()
 
+    const objectsDebug = (() => {
+
+      const floorTextureFolder = gui.addFolder('Floor').close()
+  
+      floorTextureFolder
+        .add(objects.meshes.floor.material, 'displacementBias')
+        .min(-1)
+        .max(1)
+        .step(0.001)
+      floorTextureFolder
+        .add(objects.meshes.floor.material, 'displacementScale')
+        .min(0)
+        .max(1)
+        .step(0.001)
+
+    })()
 
     return gui
 
   })()
+
 
 }
 
@@ -233,6 +253,12 @@ const shadows = (() => {
 
 })()
 
+/* SKY */
+const sky = getSky(scene)
+
+/* FOG */
+getFog(scene)
+
 /* ANIMATE */
 function animate() {
 
@@ -242,6 +268,7 @@ function animate() {
   
   // Constants
   const elapsedTime = timer.getElapsed()
+  const ghosts = lights.light.ghosts.api
 
   // Objects
   const rotatingObjects = (
@@ -258,7 +285,16 @@ function animate() {
     object: objects.meshes.sphere,
     shadow: objects.meshes.sphereSimpleShadow,
   })
-
+  randomlyRotatingLights({
+    active: defaultObject.ghostLight.active,
+    angle: elapsedTime,
+    lights: [
+      [ ghosts.light[0] , ghosts.y(0,elapsedTime) , ghosts.speed(0) , ghosts.radius(0) ],
+      [ ghosts.light[1] , ghosts.y(1,elapsedTime) , ghosts.speed(1) , ghosts.radius(1) ],
+      [ ghosts.light[2] , ghosts.y(2,elapsedTime) , ghosts.speed(2) , ghosts.radius(2) ],
+      [ ghosts.light[3] , ghosts.y(3,elapsedTime) , ghosts.speed(3) , ghosts.radius(3) ],
+    ],
+  })
   rotation({
     active: debugObject.rotationEnabled,
     elapsedTime,

@@ -10,13 +10,118 @@ export const defaultSettings = {
     params: [ 0.75 , 0.75 , 0.75 ],
     position: [ 0 , 0 , 0 ],
     visible: true,
+    wireframe: false,
   },
-  plane: {
-    material: new THREE.MeshStandardMaterial({ roughness: 0.7 }),
-    params: [ 5 , 5 ],
+  floor: {
+    material: {
+      displacementBias: - 0.2,
+      displacementScale: 0.3,
+    },
+    params: [ 20 , 20 , 100 , 100 ],
     position: [ 0 , 0 , 0 ],
     rotation: [ -Math.PI * 0.5 , 0 , 0 ],
-    visibile: true,
+    textures: {
+      type: 'webp',
+      wrapping: {
+        arm:    [ 8 , 8 ],
+        color:  [ 8 , 8 ],
+        normal: [ 8 , 8 ],
+      },
+    },
+    visible: true,
+    wireframe: false,
+  },
+  house: {
+    group: {
+      bushes: {
+        clones: [
+          {
+            rotation: { x: - 0.75 },
+            position: [ 0.8 , 0.2 , 2.2 ],
+            scale: [ 0.5 , 0.5 , 0.5 ],
+            visible: true,
+            wireframe: false,
+          },
+          {
+            rotation: { x: - 0.75 },
+            position: [ 1.4 , 0.1 , 2.1 ],
+            scale: [ 0.25 , 0.25 , 0.25 ],
+            visible: true,
+            wireframe: false,
+          },
+          {
+            rotation: { x: - 0.75 },
+            position: [ - 0.8 , 0.1 , 2.2 ],
+            scale: [ 0.4 , 0.4 , 0.4 ],
+            visible: true,
+            wireframe: false,
+          },
+          {
+            rotation: { x: - 0.75 },
+            position: [ - 1 , 0.05 , 2.6 ],
+            scale: [ 0.15 , 0.15 , 0.15 ],
+            visible: true,
+            wireframe: false,
+          },
+        ],
+        params: [ 1 , 16 , 16],
+        textures: {
+          type: 'webp',
+          wrapping: {
+            arm:    [ 1 , 1 ],
+            color:  [ 1 , 1 ],
+            normal: [ 1 , 1 ],
+          },
+        },
+      },
+      door: {
+        params: [ 2.2 , 2.2 , 100 , 100 ],
+        textures: { type: 'webp' },
+        visible: true,
+        wireframe: false,
+      },
+      graves: {
+        max: 30,
+        params: [ 0.6 , 0.8 , 0.2 ],
+        textures: {
+          type: 'webp',
+          wrapping: {
+            arm:    [ 0.3 , 0.4 ],
+            color:  [ 0.3 , 0.4 ],
+            normal: [ 0.3 , 0.4 ],
+          },
+        },
+        visible: true,
+        wireframe: false,
+      },
+      roof: {
+        params: [ 3.5 , 1.5 , 4],
+        textures: {
+          type: 'webp',
+          wrapping: {
+            arm:    [ 3 , 1 ],
+            color:  [ 3 , 1 ],
+            normal: [ 3 , 1 ],
+          },
+        },
+        visible: true,
+        wireframe: false,
+      },
+      walls: {
+        params: [ 4 , 2.5 , 4 ],
+        textures: {
+          type: 'webp',
+          wrapping: {
+            arm:    [ 3 , 1 ],
+            color:  [ 3 , 1 ],
+            normal: [ 3 , 1 ],
+          },
+        },
+        visible: true,
+        wireframe: false,
+      },
+    },
+    visible: true,
   },
   sphere: {
     material: new THREE.MeshStandardMaterial({ roughness: 0.7 }),
@@ -27,7 +132,7 @@ export const defaultSettings = {
   sphereSimpleShadow: {
     color: 0x000000,
     material: new THREE.MeshStandardMaterial({ roughness: 0.7 }),
-    params: [1.5, 1.5],
+    params: [ 1.5 , 1.5 ],
     visible: true,
   },
   torus: {
@@ -47,15 +152,14 @@ export const material = (() => {
 export const list = (
   useSimpleShadow
     ? [
-      'plane',
-      'sphere',
+      'floor',
+      'house',
     ]
   // others
     : [
-        // 'cube',
-        'plane',
-        'sphere',
-        // 'torus',
+        'bush',
+        'floor',
+        'house',
       ]
 )
 

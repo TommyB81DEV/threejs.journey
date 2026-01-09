@@ -1,4 +1,5 @@
 import * as THREE from 'three'
+import { Sky } from 'three/examples/jsm/objects/Sky.js'
 
 import {
   camera,
@@ -7,6 +8,14 @@ import {
 } from '../config'
 
 // SYNC
+export function getFog(scene){
+  if (defaultObject.fog.base.active) {
+    scene.fog = new THREE.Fog(...defaultObject.fog.base.params)
+  }
+  if (defaultObject.fog.exp2.active) {
+    scene.fog = new THREE.FogExp2(...defaultObject.fog.exp2.params)
+  }
+}
 export function getLights(params) {
 
   const {
@@ -26,6 +35,32 @@ export function getLights(params) {
   lights.light = { ...activations }
 
   return lights
+
+}
+export function getSky(scene) {
+
+  let sky = null
+
+  if (defaultObject.sky.active) {
+    
+    sky = new Sky()
+  
+    for (const [ param , val ] of Object.entries(defaultObject.sky.params)) {
+      if (Array.isArray(val)) {
+        sky.material.uniforms[param].value.set(...val)
+      }
+      else {
+        sky.material.uniforms[param].value = val
+      }
+    }
+  
+    sky.scale.set(...defaultObject.sky.scale)
+  
+    scene.add(sky)
+
+  }
+
+  return sky
 
 }
 export function toggleCustomLights(params) {
@@ -62,6 +97,28 @@ export function toggleCustomLights(params) {
           scene.add(directionalLight)
           scene.add(directionalLight.helper)
           scene.add(directionalLight.target)
+
+          break
+
+        case 'door':
+          const doorLight = doorLightSet(settings).light
+          lightsObjects['doorLight'] = doorLight        
+          objects.meshes.house.add(doorLight)
+          break
+
+        case 'ghosts':
+
+          const ghosts = ghostsLightsSet({ 
+            scene,
+            settings: settings.ghostLight.clones,
+          })
+
+          lightsObjects['ghosts'] = {
+            api: ghosts.api,
+            lights: ghosts.group,
+          }
+
+          scene.add(ghosts.group)
 
           break
 
@@ -521,6 +578,78 @@ export function directionalLightSet(settings){
   return { helper , light }
 
 }
+export function doorLightSet(settings) {
+  
+  let helper
+  let light
+
+  // Settings
+  const {
+    doorLight: lightSettings,
+  } = settings
+  const { 
+    mapSize,
+    helper: helperConfig,
+    params: lightParams,
+    position: lightPosition,
+  } = lightSettings
+
+  // Creation
+  light = new THREE.PointLight(...lightParams)
+
+  // Position
+  light.position.set(...lightPosition)
+
+  // Configs
+  light.castShadow = true
+  light.shadow.mapSize.height = mapSize[0]
+  light.shadow.mapSize.width = mapSize[1]
+
+  helper = new THREE.CameraHelper(light.shadow.camera)
+  helper.visible = helperConfig.visible
+
+  return { helper , light }
+
+}
+export function ghostsLightsSet(params) {
+
+  const {
+    scene,
+    settings,
+  } = params
+
+  const ghosts = new THREE.Group()
+
+  for (const ghostSettings of settings) {
+    
+    const ghostsLightObj = pointLightSet({ pointLight: ghostSettings })
+
+    const ghostLight = ghostsLightObj.light
+          ghostLight.helper = ghostsLightObj.helper
+
+    ghostLight.castShadow = true
+    ghostLight.shadow.camera.far = 10
+    ghostLight.shadow.mapSize.height = 256
+    ghostLight.shadow.mapSize.width = 256
+
+    ghosts.add(ghostLight)
+    scene.add(ghostLight.helper)
+
+  }
+
+  const api = {
+    light: ghosts.children,
+    radius: n => defaultObject.ghostLight.clones[n].radius,
+    speed: n => defaultObject.ghostLight.clones[n].speed,
+    y: (n,angle) => defaultObject.ghostLight.clones[n].y(angle),
+  }
+
+  return {
+    api,
+    group: ghosts,
+  }
+
+}
 export function hemisphereLightSet(settings) {
   
   let light
@@ -576,6 +705,22 @@ export function pointLightSet(settings) {
   return { helper , light }
 
 }
+export function randomlyRotatingLights(params) {
+
+  const {
+    active,
+    angle,
+    lights,
+  } = params
+
+  if (active) {
+    for (const [ light , animation , speed , radius ] of lights) {
+      light.position.x = Math.cos( angle * speed ) * radius
+      light.position.z = Math.sin( angle * speed ) * radius
+      light.position.y = animation
+    }
+  }
+
 }
 export function rectAreaLightSet(settings) {
 
