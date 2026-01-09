@@ -43,6 +43,7 @@ const debugObject = {
 }
 
 export {
+  camera,
   defaultObject,
   debugObject,
   lightsConfig,

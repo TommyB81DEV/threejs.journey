@@ -4,6 +4,10 @@ import {
   useSimpleShadow,
 } from '../config'
 
+import {
+  tileAndWrapTextures,
+} from './commons'
+
 // API
 export function getObjects(params) {
 
@@ -11,6 +15,7 @@ export function getObjects(params) {
     config,
     objects,
     scene,
+    textureLoader,
   } = params
 
   const materials = Object.fromEntries(
@@ -22,7 +27,7 @@ export function getObjects(params) {
   objects.activations = objects.list
 
   const meshes = toggleObjects({
-    materials , objects, scene,
+    materials , objects, scene, textureLoader,
     settings: config,
   })
 
@@ -38,6 +43,7 @@ export function toggleObjects(params) {
     objects,
     scene,
     settings,
+    textureLoader,
   } = params
 
   const meshes = {}
@@ -49,12 +55,24 @@ export function toggleObjects(params) {
 
         case 'cube':
           meshes.cube = cubeSet({ material: materials[name] , settings })
-          scene.add(meshes.cube)
+          if (meshes.cube) scene.add(meshes.cube)
           break
 
-        case 'plane':
-          meshes.plane = planeSet({ material: materials[name], settings })
-          scene.add(meshes.plane)
+        case 'floor':
+          meshes.floor = floorSet({ 
+            settings, textureLoader,
+            material: materials[name],
+          })
+          if (meshes.floor) scene.add(meshes.floor)
+          break
+
+        case 'house':
+
+          const house = houseSet({ settings , textureLoader })
+
+          meshes.house = house
+          if (meshes.house) scene.add(meshes.house)
+
           break
 
         case 'sphere':
@@ -62,16 +80,16 @@ export function toggleObjects(params) {
           const sphere = sphereSet({ material: materials[name], settings })
 
           meshes.sphere = useSimpleShadow ? sphere.object : sphere
-          if (useSimpleShadow) meshes.sphereSimpleShadow = sphere.shadow
+          if (useSimpleShadow && meshes.sphere) meshes.sphereSimpleShadow = sphere.shadow
 
-          scene.add(meshes.sphere)
-          if (useSimpleShadow) scene.add(sphere.shadow)
+          if (meshes.sphere) scene.add(meshes.sphere)
+          if (useSimpleShadow && meshes.sphere) scene.add(sphere.shadow)
 
           break
 
         case 'torus':
           meshes.torus = torusSet({ material: materials[name], settings })
-          scene.add(meshes.torus)
+          if (meshes.torus) scene.add(meshes.torus)
           break
 
       }
@@ -105,57 +123,405 @@ export function cubeSet(params){
 
   const { material , settings } = params
 
-  const object = (new THREE.Mesh(
-    new THREE.BoxGeometry(...settings.cube.params),
-    material,)
-  )
+  if (settings.cube.render) {
+      
+    const object = (new THREE.Mesh(
+      new THREE.BoxGeometry(...settings.cube.params),
+      material,)
+    )
 
-  object.position.set(...settings.cube.position)
-  object.visible = settings.cube.visible
+    object.position.set(...settings.cube.position)
+    object.visible = settings.cube.visible
 
-  return object
+    return object
+
+  }
+
+  return null
 
 }
-export function planeSet(params){
+export function floorSet(params){
 
-  const { material , settings } = params
+  const { settings , textureLoader } = params
 
-  const object = (new THREE.Mesh(
-    new THREE.PlaneGeometry(...settings.plane.params),
-    material
-  ))
+  if (settings.floor.render) {
 
-  object.rotation.x = settings.plane.rotation[0]
-  object.position.set(0 , -0.65 , 0)
+    const texturesSettings = settings.floor.textures
+    const textureType = settings.floor.textures.type
 
-  return object
+    const alphaTexture = textureLoader.load(`./floor/floor_alpha.${textureType}`)
+    const ARMTexture = textureLoader.load(`./floor/coast_sand_rocks_02_1k/coast_sand_rocks_02_arm_1k.${textureType}`)
+    const colorTexture = textureLoader.load(`./floor/coast_sand_rocks_02_1k/coast_sand_rocks_02_diff_1k.${textureType}`)
+    const displacementTexture = textureLoader.load(`./floor/coast_sand_rocks_02_1k/coast_sand_rocks_02_disp_1k.${textureType}`)
+    const normalTexture = textureLoader.load(`./floor/coast_sand_rocks_02_1k/coast_sand_rocks_02_nor_gl_1k.${textureType}`)
+
+    tileAndWrapTextures([
+      [ ARMTexture          , texturesSettings.wrapping.arm                          ],
+      [ colorTexture        , texturesSettings.wrapping.color , THREE.SRGBColorSpace ],
+      [ displacementTexture , texturesSettings.wrapping.arm                          ],
+      [ normalTexture       , texturesSettings.wrapping.arm                          ],
+    ])
+
+    const object = (new THREE.Mesh(
+      new THREE.PlaneGeometry(...settings.floor.params),
+      new THREE.MeshStandardMaterial({
+        alphaMap: alphaTexture,
+        aoMap: ARMTexture,
+        displacementBias: settings.floor.material.displacementBias,
+        displacementMap: displacementTexture,
+        displacementScale: settings.floor.material.displacementScale,
+        map: colorTexture,
+        metalnessMap: ARMTexture,
+        normalMap: normalTexture,
+        roughnessMap: ARMTexture,
+        transparent: true,
+      })
+    ))
+
+    object.rotation.x = settings.floor.rotation[0]
+    object.position.set(...settings.floor.position)
+
+    object.receiveShadow = true
+
+    object.material.wireframe = settings.floor.wireframe || false
+
+    object.visible = settings.floor.visible
+    
+    return object
+
+  }
+
+  return null
+
+}
+export function houseSet(params){
+
+  const {
+    settings: rootSettings,
+    textureLoader,
+  } = params
+
+  if (rootSettings.house.render) {
+    
+    const house  = new THREE.Group()
+
+    const objects = rootSettings.house.group
+
+    for (const [ name , settings ] of Object.entries(objects)) {
+      switch (name) {
+
+        case 'bushes':
+
+          const bushTextureType = settings.textures.type
+
+          const bushARMTexture = textureLoader.load(`./bush/leaves_forest_ground_1k/leaves_forest_ground_arm_1k.${bushTextureType}`)
+          const bushColorTexture = textureLoader.load(`./bush/leaves_forest_ground_1k/leaves_forest_ground_diff_1k.${bushTextureType}`)
+          const bushNormalTexture = textureLoader.load(`./bush/leaves_forest_ground_1k/leaves_forest_ground_nor_1k.${bushTextureType}`)
+
+          const bushGeometry = new THREE.SphereGeometry(...objects.bushes.params)
+          const bushMaterial = new THREE.MeshStandardMaterial({
+            aoMap: bushARMTexture,
+            color: '#ccffcc',
+            map: bushColorTexture,
+            metalnessMap: bushARMTexture,
+            normalMap: bushNormalTexture,
+            roughnessMap: bushARMTexture,
+          })
+
+          tileAndWrapTextures([
+            [ bushARMTexture    , settings.textures.wrapping.arm                           ],
+            [ bushColorTexture  , settings.textures.wrapping.color  , THREE.SRGBColorSpace ],
+            [ bushNormalTexture , settings.textures.wrapping.normal                        ],
+          ])
+
+          const bushes = []
+
+          for (const bush of objects.bushes.clones) {
+
+            const bushMesh = new THREE.Mesh(bushGeometry,bushMaterial.clone())
+
+            bushMesh.position.set(...bush.position)
+            bushMesh.scale.set(...bush.scale)
+            bushMesh.visible = bush.visible
+
+            bushMesh.material.wireframe = bush.wireframe
+
+            bushMesh.castShadow = true
+            bushMesh.receiveShadow = true
+
+            if (bush.rotation) {
+              for (const [ axis , val ] of Object.entries(bush.rotation)) {
+                bushMesh.rotation[axis] = val
+              }
+            }
+
+            bushes.push(bushMesh)
+            house.add(bushMesh)
+
+          }
+
+          break
+
+        case 'door':
+
+          const doorTextureType = settings.textures.type
+
+          const doorAlphaTexture = textureLoader.load(`./door/door_alpha.${doorTextureType}`)
+          const doorAOTexture = textureLoader.load(`./door/door_ambientOcclusion.${doorTextureType}`)
+          const doorColorTexture = textureLoader.load(`./door/door_color.${doorTextureType}`)
+          const doorHeightTexture = textureLoader.load(`./door/door_height.${doorTextureType}`)
+          const doorMetalnessTexture = textureLoader.load(`./door/door_metalness.${doorTextureType}`)
+          const doorNormalTexture = textureLoader.load(`./door/door_normal.${doorTextureType}`)
+          const doorRoughnessTexture = textureLoader.load(`./door/door_roughness.${doorTextureType}`)
+
+          doorColorTexture.colorSpace = THREE.SRGBColorSpace
+
+          const door = (new THREE.Mesh(
+            new THREE.PlaneGeometry(...settings.params),
+            new THREE.MeshStandardMaterial({
+              alphaMap: doorAlphaTexture,
+              aoMap: doorAOTexture,
+              displacementMap: doorHeightTexture,
+              displacementScale: 0.15,
+              map: doorColorTexture,
+              metalnessMap: doorMetalnessTexture,
+              normalMap: doorNormalTexture,
+              roughnessMap: doorRoughnessTexture,
+              transparent: true,
+            })
+          ))
+
+          door.position.y = settings.params[1] * 0.5
+          door.position.z = (objects.walls.params[2] * 0.5) - 0.025
+
+          door.material.wireframe = settings.wireframe
+
+          door.castShadow = true
+          door.receiveShadow = true
+
+          door.visible = settings.visible
+
+          house.add(door)
+
+          break
+
+        case 'graves':
+
+          const graveTextureType = settings.textures.type
+
+          const graveARMTexture = textureLoader.load(`./grave/plastered_stone_wall_1k/plastered_stone_wall_arm_1k.${graveTextureType}`)
+          const graveColorTexture = textureLoader.load(`./grave/plastered_stone_wall_1k/plastered_stone_wall_diff_1k.${graveTextureType}`)
+          const graveNormalTexture = textureLoader.load(`./grave/plastered_stone_wall_1k/plastered_stone_wall_nor_gl_1k.${graveTextureType}`)
+
+          tileAndWrapTextures([
+            [ graveARMTexture    , settings.textures.wrapping.arm                           ],
+            [ graveColorTexture  , settings.textures.wrapping.color  , THREE.SRGBColorSpace ],
+            [ graveNormalTexture , settings.textures.wrapping.normal                        ],
+          ])
+
+          const graves = new THREE.Group()
+          const graveGeometry = new THREE.BoxGeometry(...objects.graves.params)
+          const graveMaterial = new THREE.MeshStandardMaterial({
+            aoMap: graveARMTexture,
+            map: graveColorTexture,
+            normalMap: graveNormalTexture,
+            roughnessMap: graveARMTexture,
+            metalnessMap: graveARMTexture,
+          })
+
+          for (let index = 0; index < objects.graves.max; index++) {
+
+            const angle = Math.random() * (Math.PI * 2)
+            const grave = new THREE.Mesh(graveGeometry,graveMaterial)
+            const radius = 3 + Math.random() * 4
+
+            const x = Math.sin(angle) * radius
+            const z = Math.cos(angle) * radius
+
+            grave.position.x = x
+            grave.position.y = Math.random() * 0.4
+            grave.position.z = z
+
+            grave.rotation.x = (Math.random() - 0.5) * 0.4
+            grave.rotation.y = (Math.random() - 0.5) * 0.4
+            grave.rotation.z = (Math.random() - 0.5) * 0.4
+
+            grave.material.wireframe = settings.wireframe
+
+            grave.castShadow = true
+            grave.receiveShadow = true
+
+            graves.add(grave)
+
+          }        
+
+          graves.visible = settings.visible
+          
+          house.add(graves)
+
+          break
+
+        case 'roof':
+
+          const roofTextureType = settings.textures.type
+
+          const roofARMTexture = textureLoader.load(`/roof/roof_slates_02_1k/roof_slates_02_arm_1k.${roofTextureType}`)
+          const roofColorTexture = textureLoader.load(`/roof/roof_slates_02_1k/roof_slates_02_diff_1k.${roofTextureType}`)
+          const roofNormalTexture = textureLoader.load(`/roof/roof_slates_02_1k/roof_slates_02_nor_1k.${roofTextureType}`)
+
+          const roof = (new THREE.Mesh(
+            new THREE.ConeGeometry(...settings.params),
+            new THREE.MeshStandardMaterial({
+              aoMap: roofARMTexture,
+              map: roofColorTexture,
+              metalnessMap: roofARMTexture,
+              normalMap: roofNormalTexture,
+              roughnessMap: roofARMTexture,
+            })
+          ))
+
+          tileAndWrapTextures([
+            [ roofARMTexture    , settings.textures.wrapping.arm                           ],
+            [ roofColorTexture  , settings.textures.wrapping.color  , THREE.SRGBColorSpace ],
+            [ roofNormalTexture , settings.textures.wrapping.normal                        ],
+          ])
+
+          roof.rotation.y = Math.PI * 0.25,
+
+          roof.position.y = (
+            objects.walls.params[1] + 
+            (settings.params[1] * 0.5)
+          )
+
+          roof.material.wireframe = settings.wireframe
+
+          roof.castShadow = true
+          roof.receiveShadow = true
+
+          roof.visible = settings.visible
+
+          house.add(roof)
+
+          break
+
+        case 'walls':
+
+          const wallTextureType = settings.textures.type
+
+          const wallARMTexture = textureLoader.load(`./wall/castle_brick_broken_06_1k/castle_brick_broken_06_diff_1k.${wallTextureType}`)
+          const wallColorTexture = textureLoader.load(`./wall/castle_brick_broken_06_1k/castle_brick_broken_06_diff_1k.${wallTextureType}`)
+          const wallNormalTexture = textureLoader.load(`./wall/castle_brick_broken_06_1k/castle_brick_broken_06_nor_gl_1k.${wallTextureType}`)
+
+          wallColorTexture.colorSpace = THREE.SRGBColorSpace
+
+          const walls = (new THREE.Mesh(
+            new THREE.BoxGeometry(...settings.params),
+            new THREE.MeshStandardMaterial({
+              aoMap: wallARMTexture,
+              map: wallARMTexture,
+              metalnessMap: wallARMTexture,
+              normalMap: wallNormalTexture,
+              roughnessMap: wallARMTexture,
+            })
+          ))
+
+          walls.position.y = settings.params[1] * 0.5
+          walls.visible = settings.visible
+
+          walls.material.wireframe = settings.wireframe
+
+          walls.castShadow = true
+          walls.receiveShadow = true
+
+          house.add(walls)
+
+          break
+
+      }
+    }
+
+    house.visible = rootSettings.house.visible
+
+    return house
+
+  }
+
+  return null
+
+}
+export function particlesSet(params) {
+
+  const {
+    settings,
+  } = params
+
+  if (settings.particles.render) {
+
+    const count = defaultObject.particles.max
+  
+    const particleGeometry = new THREE.BufferGeometry()
+    const particleMaterial = new THREE.PointsMaterial({
+      size: defaultObject.particles.size,
+      sizeAttenuation: defaultObject.particles.sizeAttenuation,
+    })
+ 
+    const positions = (() => {
+  
+      const positions = new Float32Array(count * 3)
+  
+      for (let i = 0; i < count * 3; i++) {
+        positions[i] = (Math.random() - 0.5) * 10
+      }
+  
+      return positions
+  
+    })()
+
+    particleGeometry.setAttribute(
+      'positions',
+      new THREE.BufferAttribute(positions,3)
+    )
+
+    const particles = new THREE.Points( particleGeometry , particleMaterial )
+
+    return particles
+
+  }
+
+  return null
 
 }
 export function sphereSet(params){
 
   const { material , settings } = params
 
-  let output
-  let shadow
+  if (settings.sphere.render) {
+    
+    let output
+    let shadow
+  
+    const object = (new THREE.Mesh(
+      new THREE.SphereGeometry(...settings.sphere.params),
+      material
+    ))
+  
+    object.position.set(...settings.sphere.position)
+    object.visible = settings.sphere.visible
+  
+    if (useSimpleShadow) {
+      shadow = sphereSimpleShadowSet(settings)  
+      output = { object , shadow }
+    }
+  
+    else {
+      output = object
+    }
+  
+    return output
 
-  const object = (new THREE.Mesh(
-    new THREE.SphereGeometry(...settings.sphere.params),
-    material
-  ))
-
-  object.position.set(...settings.sphere.position)
-  object.visible = settings.sphere.visible
-
-  if (useSimpleShadow) {
-    shadow = sphereSimpleShadowSet(settings)  
-    output = { object , shadow }
   }
 
-  else {
-    output = object
-  }
-
-  return output
+  return null
 
 }
 export function sphereSimpleShadowSet(settings){
@@ -184,15 +550,21 @@ export function torusSet(params){
 
   const { material , settings } = params
 
-  const object = (new THREE.Mesh(
-    new THREE.TorusGeometry(...settings.torus.params),
-    material)
-  )
+  if (settings.torus.render) {
+    
+    const object = (new THREE.Mesh(
+      new THREE.TorusGeometry(...settings.torus.params),
+      material)
+    )
+  
+    object.position.set(...settings.torus.position)
+    object.visible = settings.torus.visible
+  
+    return object
 
-  object.position.set(...settings.torus.position)
-  object.visible = settings.torus.visible
+  }
 
-  return object
+  return null
 
 }
 
