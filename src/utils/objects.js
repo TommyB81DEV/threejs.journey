@@ -1,6 +1,7 @@
 import * as THREE from 'three'
 
 import {
+  defaultObject,
   useSimpleShadow,
 } from '../config'
 
@@ -38,49 +39,6 @@ export function getObjects(params) {
   return objects
 
 }
-<<<<<<< HEAD
-=======
-export function getParticles(scene) {
-
-  let particles = null
-
-  if (defaultObject.particles.active) {
-
-    const count = defaultObject.particles.max
-  
-    const particleGeometry = new THREE.BufferGeometry()
-    const particleMaterial = new THREE.PointsMaterial({
-      size: defaultObject.particles.size,
-      sizeAttenuation: defaultObject.particles.sizeAttenuation,
-    })
-    
-    particles = new THREE.Points(particleGeometry,particleMaterial)
-  
-    const positions = (() => {
-  
-      const positions = new Float32Array(count * 3)
-  
-      for (let i = 0; i < count * 3; i++) {
-        positions[i] = (Math.random() - 0.5) * 10
-      }
-  
-      return positions
-  
-    })()
-  
-    particleGeometry.setAttribute(
-      'positions',
-      new THREE.BufferAttribute(positions,3)
-    )
-  
-    scene.add(particles)
-
-  }
-
-  return particles
-
-}
->>>>>>> 330a635 (asd)
 export function toggleObjects(params) {
 
   const {
@@ -524,33 +482,56 @@ export function particlesSet(params) {
 
   const {
     settings,
+    textureLoader,
   } = params
 
   if (settings.particles.render) {
 
-    const count = defaultObject.particles.max
+    const count = defaultObject.particles.count
   
+    const texture = textureLoader.load('./particles/2.png')
+
     const particleGeometry = new THREE.BufferGeometry()
     const particleMaterial = new THREE.PointsMaterial({
+
+      alphaMap: texture,
+      alphaTest: 0.001,
+      blending: THREE.AdditiveBlending,
+      depthWrite: false,
+      transparent: true,
+
+      // color: '#ff00ff',
+      map: texture,
       size: defaultObject.particles.size,
       sizeAttenuation: defaultObject.particles.sizeAttenuation,
+      vertexColors: true,
+
     })
  
-    const positions = (() => {
+    const attributes = (() => {
   
+      const colors = new Float32Array(count * 3)
       const positions = new Float32Array(count * 3)
   
       for (let i = 0; i < count * 3; i++) {
+        colors[i] = Math.random()
         positions[i] = (Math.random() - 0.5) * 10
       }
   
-      return positions
+      return {
+        colors,
+        positions,
+      }
   
     })()
 
     particleGeometry.setAttribute(
-      'positions',
-      new THREE.BufferAttribute(positions,3)
+      'color',
+      new THREE.BufferAttribute(attributes.colors,3)
+    )
+    particleGeometry.setAttribute(
+      'position',
+      new THREE.BufferAttribute(attributes.positions,3)
     )
 
     const particles = new THREE.Points( particleGeometry , particleMaterial )

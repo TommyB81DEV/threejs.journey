@@ -1,7 +1,8 @@
 import { lesson } from './lesson'
 
-export const useNativeShadows = lesson === '15-native'
 export const useBakedShadows = lesson === '15-baked'
+export const useNativeShadows = lesson === '15-native'
+export const useRandomlyRotatingLIghts = lesson === '16'
 export const useSimpleShadow = lesson === '15-simple'
 
 export const defaultSettings = {

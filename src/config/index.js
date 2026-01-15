@@ -7,6 +7,7 @@ import {
   reset as lightsReset,
   useBakedShadows,
   useNativeShadows,
+  useRandomlyRotatingLIghts,
   useSimpleShadow,
 } from './lights'
 
@@ -53,5 +54,6 @@ export {
   showGui,
   useBakedShadows,
   useNativeShadows,
+  useRandomlyRotatingLIghts,
   useSimpleShadow,
 }

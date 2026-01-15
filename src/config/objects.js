@@ -123,13 +123,13 @@ export const defaultSettings = {
     render: true,
     visible: true,
   },
-<<<<<<< HEAD
-=======
   particles: {
-    active: true,
-    max: 500,
-    size: 0.02,
+    animation: false,
+    count: 5000,
+    size: 0.2,
     sizeAttenuation: true,
+    render: true,
+    visible: true,
   },
   plane: {
     material: new THREE.MeshStandardMaterial(),
@@ -197,7 +197,7 @@ export const list = (
     ]
   : lesson === '17' ?
     [
-      'cube',
+      // 'cube',
       'particles',
     ]
   : // 

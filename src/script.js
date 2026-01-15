@@ -12,6 +12,7 @@ import {
   showGui,
   useBakedShadows,
   useNativeShadows,
+  useRandomlyRotatingLIghts,
   useSimpleShadow,
 } from './config/'
 
@@ -288,7 +289,7 @@ function animate() {
     shadow: objects.meshes.sphereSimpleShadow,
   })
   randomlyRotatingLights({
-    active: defaultObject.ghostLight.active,
+    active: useRandomlyRotatingLIghts,
     angle: elapsedTime,
     lights: [
       [ ghosts?.light[0] , ghosts?.y(0,elapsedTime) , ghosts?.speed(0) , ghosts?.radius(0) ],
