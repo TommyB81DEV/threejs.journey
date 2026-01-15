@@ -7,14 +7,19 @@ import {
   useNativeShadows,
 } from '../config'
 
+import { lesson } from '../config/lesson'
+
 // SYNC
 export function getFog(scene){
   if (defaultObject.fog.base.active) {
     scene.fog = new THREE.Fog(...defaultObject.fog.base.params)
+    return scene.fog
   }
   if (defaultObject.fog.exp2.active) {
     scene.fog = new THREE.FogExp2(...defaultObject.fog.exp2.params)
+    return scene.fog
   }
+  return null
 }
 export function getLights(params) {
 
@@ -101,9 +106,11 @@ export function toggleCustomLights(params) {
           break
 
         case 'door':
-          const doorLight = doorLightSet(settings).light
-          lightsObjects['doorLight'] = doorLight        
-          objects.meshes.house.add(doorLight)
+          if (objects.meshes.house) {
+            const doorLight = doorLightSet(settings).light
+            lightsObjects['doorLight'] = doorLight        
+            objects.meshes.house.add(doorLight)
+          }
           break
 
         case 'ghosts':
@@ -257,7 +264,10 @@ export function updateLightControllers(action,lights,gui) {
           }
 
           if (action === 'on') {
-            
+
+            const cameraHelper = lights.light.directionalLight.helper
+            const shadowCamera = lights.light.directionalLight.shadow.camera
+
             lights.folder.directional = gui.addFolder('Directional Light').close()
   
             lights.controller.directionalLightColor = (
@@ -279,6 +289,32 @@ export function updateLightControllers(action,lights,gui) {
               lights.folder.directional
                 .add(lights.light.directionalLight.helper,'visible')
                 .name('Helper')
+            )
+
+            lights.controller.directionalLightShadowNear = (
+              lights.folder.directional
+                .add(shadowCamera, 'near')
+                .min(0.1)
+                .max(50)
+                .step(0.1)
+                .name('Shadow Camera ::: Near')
+                .onChange(() => {
+                  cameraHelper.update()
+                  shadowCamera.updateProjectionMatrix()
+                })
+            )
+              
+            lights.controller.directionalLightShadowNear = (
+                lights.folder.directional
+                .add(shadowCamera, 'far')
+                .min(0.1)
+                .max(40)
+                .step(0.1)
+                .name('Shadow Camera ::: Far')
+                .onChange(() => {
+                  cameraHelper.update()
+                  shadowCamera.updateProjectionMatrix()
+                })
             )
 
           }
@@ -531,8 +567,14 @@ export function ambientLightSet(settings){
   const { ambientLight: lightSettings } = settings
   const { params: lightParams } = lightSettings
 
+  // Color
+  const color = (
+    lesson === '15-native' ? 0xf700ff
+    /* base */             : 0xffffff
+  )
+
   // Init
-  light = new THREE.AmbientLight(...lightParams)
+  light = new THREE.AmbientLight(...lightParams(color))
 
   return { light }
 
@@ -547,30 +589,34 @@ export function directionalLightSet(settings){
     directionalLight: lightSettings,
   } = settings
   const {
-    amplitude , far , mapSize , near , radius ,
+    amplitude , colors , far, intensities , mapSize , near , radius ,
     helper: helperConfig,
     params: lightParams,
     position: lightPosition,
   } = lightSettings
 
+  // Color
+  const color = colors?.[lesson] ?? colors.base
+
+  // Intensity
+  const intensity = intensities?.[lesson] ?? intensities.base
+
   // Creation
-  light = new THREE.DirectionalLight(...lightParams)
+  light = new THREE.DirectionalLight(...lightParams(color,intensity))
 
   // Position
   light.position.set(...lightPosition)
 
   // Configs
-  if (useNativeShadows) {
-    light.castShadow = true
-    light.shadow.camera.bottom = amplitude[2]
-    light.shadow.camera.far = far
-    light.shadow.camera.left = amplitude[3]
-    light.shadow.camera.near = near
-    light.shadow.camera.right = amplitude[1]
-    light.shadow.camera.top = amplitude[0]
-    light.shadow.mapSize.height = mapSize[0]
-    light.shadow.mapSize.width = mapSize[1]
-  }
+  light.castShadow = true
+  light.shadow.camera.bottom = amplitude[2]
+  light.shadow.camera.far = far
+  light.shadow.camera.left = amplitude[3]
+  light.shadow.camera.near = near
+  light.shadow.camera.right = amplitude[1]
+  light.shadow.camera.top = amplitude[0]
+  light.shadow.mapSize.height = mapSize[0]
+  light.shadow.mapSize.width = mapSize[1]
 
   helper = new THREE.CameraHelper(light.shadow.camera)
   helper.visible = helperConfig.visible
@@ -678,7 +724,7 @@ export function pointLightSet(settings) {
   } = settings
 
   const { 
-    mapSize,
+    colors, intensities, mapSize,
     far = camera.default.perspective.far,
     helper: helperConfig,
     near = camera.default.perspective.near,
@@ -686,8 +732,21 @@ export function pointLightSet(settings) {
     position: lightPosition,
   } = lightSettings
 
+  
   // Creation
-  light = new THREE.PointLight(...lightParams)
+  light = (() => {
+    if (typeof params === 'function') {
+
+      const color = colors?.[lesson] ?? colors.base
+      const intensity = intensities?.[lesson] ?? intensities.base
+
+      return new THREE.PointLight(...lightParams(color,intensity))
+
+    }
+    else {
+      return new THREE.PointLight(...lightParams)
+    }
+  })()
 
   // Position
   light.position.set(...lightPosition)

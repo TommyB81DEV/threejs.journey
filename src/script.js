@@ -1,6 +1,5 @@
 import * as THREE from 'three'
 import { OrbitControls } from 'three/examples/jsm/controls/OrbitControls.js'
-import { Sky } from 'three/examples/jsm/objects/Sky.js'
 import { Timer } from 'three/src/core/Timer.js'
 
 import GUI from 'lil-gui'
@@ -64,17 +63,13 @@ lights = getLights({
   lights: lightsReset,
 })
 
-/* CLOCK */
+/* TIMER */
 const timer = new Timer()
 
 /* CAMERA */
 const { camera , cameraControls } = (()=>{
 
-  const lookAtPosition = (
-    useSimpleShadow 
-      ? objects.meshes.house.position 
-      : objects.meshes.house.position
-  )
+  const lookAtPosition = new THREE.Vector3( 0 , 0 , 0 )
 
   const camera = new THREE.PerspectiveCamera(75, aspectRatio(sizes) , 0.1 , 100)
         camera.position.x = 4
@@ -187,31 +182,36 @@ if (showGui) {
 
     })()
 
+    // Lights
     const lightsDebug = (() => {
       lights.controller = updateLightControllers('on', lights, gui)
     })()
 
+    // Objects
     const objectsDebug = (() => {
 
-      const floorTextureFolder = gui.addFolder('Floor').close()
-  
-      floorTextureFolder
-        .add(objects.meshes.floor.material, 'displacementBias')
-        .min(-1)
-        .max(1)
-        .step(0.001)
-      floorTextureFolder
-        .add(objects.meshes.floor.material, 'displacementScale')
-        .min(0)
-        .max(1)
-        .step(0.001)
+      if (defaultObject.floor.active) {
+        
+        const floorTextureFolder = gui.addFolder('Floor').close()
+    
+        floorTextureFolder
+          .add(objects.meshes.floor.material, 'displacementBias')
+          .min(-1)
+          .max(1)
+          .step(0.001)
+        floorTextureFolder
+          .add(objects.meshes.floor.material, 'displacementScale')
+          .min(0)
+          .max(1)
+          .step(0.001)
+
+      }
 
     })()
 
     return gui
 
   })()
-
 
 }
 
@@ -220,6 +220,9 @@ axesHelper({
   helpers, scene,
   enable: debugObject.axesHelper,
 })
+
+/* FOG */
+const fog = getFog(scene)
 
 /* SHADOWS */
 const shadows = (() => {
@@ -233,18 +236,20 @@ const shadows = (() => {
     bakedShadow = textureLoader.load('/textures/bakedShadow.jpg')
     bakedShadow.colorSpace = THREE.SRGBColorSpace
 
-    objects.meshes.floor.material = new THREE.MeshBasicMaterial({ map: bakedShadow })
+    objects.meshes.plane.material = new THREE.MeshBasicMaterial({ map: bakedShadow })
 
   }
 
-  if (useNativeShadows) {  
+  if (useNativeShadows) {
     for (const [ name , _ ] of Object.entries(objects.meshes)) {
       if (name === 'floor') {
-        objects.meshes[name].receiveShadow = true
+        if (objects.meshes[name]) objects.meshes[name].receiveShadow = true
       }
       else {
-        objects.meshes[name].castShadow = true
-        objects.meshes[name].receiveShadow = true
+        if (objects.meshes[name]) {
+          objects.meshes[name].castShadow = true
+          objects.meshes[name].receiveShadow = true
+        }
       }
     }
   }
@@ -256,9 +261,6 @@ const shadows = (() => {
 /* SKY */
 const sky = getSky(scene)
 
-/* FOG */
-getFog(scene)
-
 /* ANIMATE */
 function animate() {
 
@@ -268,7 +270,7 @@ function animate() {
   
   // Constants
   const elapsedTime = timer.getElapsed()
-  const ghosts = lights.light.ghosts.api
+  const ghosts = lights?.light?.ghosts?.api
 
   // Objects
   const rotatingObjects = (
@@ -289,16 +291,16 @@ function animate() {
     active: defaultObject.ghostLight.active,
     angle: elapsedTime,
     lights: [
-      [ ghosts.light[0] , ghosts.y(0,elapsedTime) , ghosts.speed(0) , ghosts.radius(0) ],
-      [ ghosts.light[1] , ghosts.y(1,elapsedTime) , ghosts.speed(1) , ghosts.radius(1) ],
-      [ ghosts.light[2] , ghosts.y(2,elapsedTime) , ghosts.speed(2) , ghosts.radius(2) ],
-      [ ghosts.light[3] , ghosts.y(3,elapsedTime) , ghosts.speed(3) , ghosts.radius(3) ],
+      [ ghosts?.light[0] , ghosts?.y(0,elapsedTime) , ghosts?.speed(0) , ghosts?.radius(0) ],
+      [ ghosts?.light[1] , ghosts?.y(1,elapsedTime) , ghosts?.speed(1) , ghosts?.radius(1) ],
+      [ ghosts?.light[2] , ghosts?.y(2,elapsedTime) , ghosts?.speed(2) , ghosts?.radius(2) ],
+      [ ghosts?.light[3] , ghosts?.y(3,elapsedTime) , ghosts?.speed(3) , ghosts?.radius(3) ],
     ],
   })
   rotation({
     active: debugObject.rotationEnabled,
     elapsedTime,
-    meshes: useSimpleShadow ? [ sphere ] : rotatingObjects,
+    meshes: useSimpleShadow ? [ objects.meshes.sphere ] : rotatingObjects,
     speed: defaultObject.rotationSpeed,
   })
 

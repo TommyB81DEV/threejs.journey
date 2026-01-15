@@ -1,14 +1,12 @@
 import * as THREE from 'three'
 
-import {
-  useSimpleShadow,
-} from './lights'
+import { lesson } from './lesson'
 
 export const defaultSettings = {
   cube: {
-    material: new THREE.MeshStandardMaterial({ roughness: 0.7 }),
     params: [ 0.75 , 0.75 , 0.75 ],
     position: [ 0 , 0 , 0 ],
+    render: true,
     visible: true,
     wireframe: false,
   },
@@ -19,6 +17,7 @@ export const defaultSettings = {
     },
     params: [ 20 , 20 , 100 , 100 ],
     position: [ 0 , 0 , 0 ],
+    render: true,
     rotation: [ -Math.PI * 0.5 , 0 , 0 ],
     textures: {
       type: 'webp',
@@ -64,7 +63,7 @@ export const defaultSettings = {
             wireframe: false,
           },
         ],
-        params: [ 1 , 16 , 16],
+        params: [ 1 , 16 , 16 ],
         textures: {
           type: 'webp',
           wrapping: {
@@ -95,7 +94,7 @@ export const defaultSettings = {
         wireframe: false,
       },
       roof: {
-        params: [ 3.5 , 1.5 , 4],
+        params: [ 3.5 , 1.5 , 4 ],
         textures: {
           type: 'webp',
           wrapping: {
@@ -121,12 +120,35 @@ export const defaultSettings = {
         wireframe: false,
       },
     },
+    render: true,
     visible: true,
+  },
+<<<<<<< HEAD
+=======
+  particles: {
+    active: true,
+    max: 500,
+    size: 0.02,
+    sizeAttenuation: true,
+  },
+  plane: {
+    material: new THREE.MeshStandardMaterial(),
+    params: [ 5 , 5 , 1 , 1 ],
+    position: [ 0 , -0.65 , 0 ],
+    render: true,
+    rotation: [ -Math.PI * 0.5 , 0 , 0 ],
+    visible: true,
+    wireframe: false,
   },
   sphere: {
     material: new THREE.MeshStandardMaterial({ roughness: 0.7 }),
-    params: [1, 32, 32],
-    position: useSimpleShadow ? [0, 0, 0] : [0, 0.35, 0],
+    params: [ 0.5 , 32 , 32 ],
+    position: {
+      '15-baked': [ 0 , 0 , 0],
+      '15-simple': [ 0 , 0 , 0],
+      base: [ -1.5 , 0 , 0 ],
+    },
+    render: true,
     visible: true,
   },
   sphereSimpleShadow: {
@@ -137,8 +159,9 @@ export const defaultSettings = {
   },
   torus: {
     material: new THREE.MeshStandardMaterial({ roughness: 0.7 }),
-    params: [0.3, 0.2, 32, 64],
-    position: [1.5, 0, 0],
+    params: [ 0.3 , 0.2 , 32 , 64 ],
+    position: [ 1.5 , 0 , 0 ],
+    render: true,
     visible: true,
   },
 }
@@ -150,17 +173,39 @@ export const material = (() => {
 })()
 
 export const list = (
-  useSimpleShadow
-    ? [
+  lesson === '15-baked' ?
+    [
+      'plane',
+      'sphere',
+    ]
+  : lesson === '15-native' ?
+    [
+      'cube',
+      'plane',
+      'sphere',
+      'torus',
+    ]
+  : lesson === '15-simple' ?
+    [
+      'plane',
+      'sphere',
+    ]
+  : lesson === '16' ?
+    [
       'floor',
       'house',
     ]
-  // others
-    : [
-        'bush',
-        'floor',
-        'house',
-      ]
+  : lesson === '17' ?
+    [
+      'cube',
+      'particles',
+    ]
+  : // 
+    [
+      'cube',
+      'sphere',
+      'torus',
+    ]
 )
 
 export const reset = {

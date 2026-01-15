@@ -2,5 +2,8 @@ node_modules/
 dist/
 .vercel
 
-# Ccustom folders
+# Custom folders
 _analysis/prompt.md
+
+# Slingshot
+.slingshot/*

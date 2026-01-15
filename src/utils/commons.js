@@ -41,6 +41,11 @@ export function rotation(params) {
   }
 
 }
+export function setLesson(lessons,name) {
+  lessons = Object.fromEntries(lessons.map((name) => [name, false]))
+  Object.keys(lessons).forEach((k) => (lessons[k] = k === name))
+  return name
+}
 export function tileAndWrapTextures(textures) {
   for (const [ texture , repeat, colorSpace ] of textures) {
     texture.repeat.set(...repeat)

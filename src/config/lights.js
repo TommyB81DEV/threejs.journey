@@ -1,21 +1,33 @@
-export const useNativeShadows = true
-export const useBakedShadows = useNativeShadows ? false : false
-export const useSimpleShadow = useNativeShadows ? false : false
+import { lesson } from './lesson'
+
+export const useNativeShadows = lesson === '15-native'
+export const useBakedShadows = lesson === '15-baked'
+export const useSimpleShadow = lesson === '15-simple'
 
 export const defaultSettings = {
   ambientLight: {
-    params: [ 0x86cdff , 0.5 ],
+    params: color => [ color , 0.5 ],
   },
   directionalLight: {
     amplitude: [ 8 , 8 , -8 , - 8],
+    colors: {
+      'base': 0xffffff,
+      '15-native': 0xf700ff,
+      '15-simple': 0xffffff,
+    },
     far: 20,
     helper: { visible: false },
+    intensities: {
+      '15-simple': 10,
+      'base': 1.5,
+    },
     mapSize: [ 256 , 256 ],
     near: 1,
-    params: [ 0x86cdff , 1.5 ],
+    params: (c,i) => [ c , i ],
     position: [ 3 , 2 , -8 ],
   },
   doorLight: {
+    active: lesson === '16',
     helper: { visible: true },
     mapSize: [ 1024 , 1024 ],
     params: [ 0xfa5c00 , 2 ],
@@ -23,16 +35,16 @@ export const defaultSettings = {
   },
   fog: {
     base: {
-      active: false,
+      active: lesson === '16',
       params: [ 0x05343f , 1 , 13 ],
     },
     exp2: {
-      active: true,
+      active: false,
       params: [ 0x05343f , 0.1 ],
     },
   },
   ghostLight: {
-    active: true,
+    active: lesson === '16',
     clones: [ 
       {
         helper: { visible: false },
@@ -73,23 +85,31 @@ export const defaultSettings = {
     ],
   },
   hemisphereLight: {
-    params: [0xff0000, 0x0000ff, 0.3],
-    position: [1, 0.25, 0],
+    params: [ 0xff0000 , 0x0000ff , 0.3 ],
+    position: [ 1 , 0.25 , 0 ],
   },
   rectAreaLight: {
     params: [ 0xffffff , 2 , 1 , 1 ],
     position: [0, 0, 3],
   },
   pointLight: {
+    colors: {
+      'base': 0xff00ff,
+      '15-native': 0xff3300,
+    },
     far: 10,
     helper: { visible: false },
+    intensities: {
+      'base': 10,
+      '15-native': 10,
+    },
     mapSize: [ 1024 , 1024 ],
     near: 0.5,
-    params: [ 0xff00ff , 5 ],
+    params: (c,i) => [ c , i ],
     position: [ -2 , 0.5 , -2 ],
   },
   sky: {
-    active: true,
+    active: lesson === '16',
     params: {
       mieCoefficient: 0.1,
       mieDirectionalG: 0.95,
@@ -109,16 +129,43 @@ export const defaultSettings = {
   },
 }
 
-export const list = [
-  'ambient',
-  'directional',
-  'door',
-  'ghosts',
-  // 'hemisphere',
-  // 'point',
-  // 'rectarea',
-  // 'spot',
-]
+export const list = (
+    lesson == '15-baked' ?
+    [
+      'ambient',
+      'directional',
+    ]
+  : lesson == '15-native' ?
+    [
+      'ambient',
+      'directional',
+      'point',
+      'spot',
+    ]
+  : lesson == '15-simple' ?
+    [
+      'ambient',
+      'directional',
+    ]
+  : lesson == '16' ?
+    [
+      'ambient',
+      'directional',
+      'door',
+      'ghosts',
+    ]
+  : lesson == '17' ?
+    [
+      'ambient',
+      'directional',
+    ]
+  : // Base
+    [
+      'ambient',
+      'directional',
+      // 'rectarea',
+    ]
+)
 
 export const reset = {
   activations: [],
