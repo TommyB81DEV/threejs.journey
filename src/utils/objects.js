@@ -223,6 +223,213 @@ export function floorSet(params){
   return null
 
 }
+export function generateGalaxy(params) {
+
+  const {
+    gui,
+    scene,
+    settings,
+  } = params
+
+  const {
+    active,
+    branches,
+    colors,
+    expansionFrame,
+    radius,
+    randomness,
+    randomnessPower,
+    spin,
+    stars,
+  } = settings
+
+  if (active) {
+
+    let geometry
+    let guiFolder
+    let material
+    let tweakParams
+    let points
+
+    tweakParams = {
+      branches: branches.start,
+      count: stars.start,
+      colorInside: colors.inside,
+      colorOutside: colors.outside,
+      expansionFrame: expansionFrame.start,
+      radius: radius.start,
+      randomness: randomness.start,
+      randomnessPower: randomnessPower.start,
+      size: stars.size.start,
+      spin: spin.start,
+    }
+
+    const generation = genParams => {
+
+      const {
+        branches,
+        count,
+        radius: radiusSetting,
+        randomnessPower,
+        size,
+        spin,
+      } = genParams
+
+      geometry = geometry && geometry.dispose()
+      material = material && material.dispose()
+      scene.remove(points)
+
+      geometry = new THREE.BufferGeometry()
+      material = new THREE.PointsMaterial({
+        size,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+        sizeAttenuation: true,
+        vertexColors: true,
+      })
+
+      const colors = new Float32Array(count * 3)
+      const positions = new Float32Array(count * 3)
+
+      const colorInside = new THREE.Color(genParams.colorInside)
+      const colorOutside = new THREE.Color(genParams.colorOutside)
+
+      for (let i = 0; i < count; i++) {
+
+        const i3 = i * 3
+
+        const branchAngle = (i % branches) / branches * Math.PI * 2
+        const radius = Math.random() * radiusSetting
+        const spinAngle = radius * spin
+
+        // colors
+        const colorMixed = colorInside.clone()
+              colorMixed.lerp( colorOutside , radius / radiusSetting )
+
+        colors[ i3 + 0 ] = colorMixed.r
+        colors[ i3 + 1 ] = colorMixed.g
+        colors[ i3 + 2 ] = colorMixed.b
+
+        // positions
+        const randomX = Math.pow(Math.random(),randomnessPower) * (Math.random() < 0.5 ? 1 : -1)
+        const randomY = Math.pow(Math.random(),randomnessPower) * (Math.random() < 0.5 ? 1 : -1)
+        const randomZ = Math.pow(Math.random(),randomnessPower) * (Math.random() < 0.5 ? 1 : -1)
+
+        positions[i3 + 0] = Math.cos(branchAngle + spinAngle) * radius + randomX
+        positions[i3 + 1] = randomY
+        positions[i3 + 2] = Math.sin(branchAngle + spinAngle) * radius + randomZ
+
+      }
+
+      geometry.setAttribute(
+        'color',
+        new THREE.BufferAttribute(colors,3)
+      )
+
+      geometry.setAttribute(
+        'position',
+        new THREE.BufferAttribute(positions,3)
+      )
+
+      points = new THREE.Points(geometry,material)
+
+      scene.add(points)
+
+      return points
+
+    }
+
+    points = generation(tweakParams)
+
+    guiFolder = (() => {
+
+      const guiFolder = gui.addFolder('Galaxy')
+  
+      if (settings.gui.close) guiFolder.close()
+
+      guiFolder
+        .add(tweakParams,'branches')
+        .min(branches.min)
+        .max(branches.max)
+        .step(branches.step)
+        .name('Branches')
+        .onFinishChange(() => generation(tweakParams))
+
+      guiFolder
+        .addColor(tweakParams,'colorInside')
+        .name('Color Inside')
+        .onFinishChange(() => generation(tweakParams))
+
+      guiFolder
+        .addColor(tweakParams, 'colorOutside')
+        .name('Color Outside')
+        .onFinishChange(() => generation(tweakParams))
+
+      guiFolder
+        .add(tweakParams,'count')
+        .min(stars.min)
+        .max(stars.max)
+        .step(stars.step)
+        .name('Stars Count')
+        .onFinishChange(() => generation(tweakParams))
+  
+      guiFolder
+        .add(tweakParams,'expansionFrame')
+        .min(expansionFrame.min)
+        .max(expansionFrame.max)
+        .step(expansionFrame.step)
+        .name('Raggio di espansione')
+        .onFinishChange(() => generation(tweakParams))
+
+      guiFolder
+        .add(tweakParams, 'radius')
+        .min(radius.min)
+        .max(radius.max)
+        .step(radius.step)
+        .name('Radius')
+        .onFinishChange(() => generation(tweakParams))
+
+      guiFolder
+        .add(tweakParams, 'randomness')
+        .min(randomness.min)
+        .max(randomness.max)
+        .step(randomness.step)
+        .name('Randomness')
+        .onFinishChange(() => generation(tweakParams))
+
+      guiFolder
+        .add(tweakParams, 'randomnessPower')
+        .min(randomnessPower.min)
+        .max(randomnessPower.max)
+        .step(randomnessPower.step)
+        .name('Randomness Power')
+        .onFinishChange(() => generation(tweakParams))
+
+      guiFolder
+        .add(tweakParams, 'size')
+        .min(stars.size.min)
+        .max(stars.size.max)
+        .step(stars.size.step)
+        .name('Star Size')
+        .onFinishChange(() => generation(tweakParams))
+
+      guiFolder
+        .add(tweakParams,'spin')
+        .min(spin.min)
+        .max(spin.max)
+        .step(spin.step)
+        .name('Spin')
+        .onFinishChange(() => generation(tweakParams))
+
+      return guiFolder
+
+    })()
+
+    return { gui: guiFolder , object: points }
+
+  }
+
+}
 export function houseSet(params){
 
   const {

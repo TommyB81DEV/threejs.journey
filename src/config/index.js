@@ -30,7 +30,7 @@ const defaultObject = {
     },
     start: {
       close: false,
-      hide: false,
+      hide: true,
     }
   },
   material,

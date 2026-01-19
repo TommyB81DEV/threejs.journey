@@ -34,6 +34,7 @@ import {
 
 import {
   bounceShadow,
+  generateGalaxy,
   getObjects,
 } from './utils/objects'
 
@@ -43,6 +44,7 @@ const helpers = {}
 const scene = new THREE.Scene()
 
 /* VARS */
+let gui
 let lights
 let objects
 let sizes = fit()
@@ -134,7 +136,7 @@ if (showGui) {
   })
 
   /* DEBUG */
-  const gui = (() => {
+  gui = (() => {
 
     const gui = new GUI()
     
@@ -225,6 +227,12 @@ if (showGui) {
 axesHelper({ 
   helpers, scene,
   enable: debugObject.axesHelper,
+})
+
+// Generators
+const galaxy = generateGalaxy({
+  gui, scene,
+  settings: defaultObject.galaxy,
 })
 
 /* FOG */
