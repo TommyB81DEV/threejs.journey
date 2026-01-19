@@ -137,13 +137,16 @@ if (showGui) {
   const gui = (() => {
 
     const gui = new GUI()
-          gui.close()
-          gui.hide()
+    
+    if (defaultObject.gui.start.close) gui.close()
+    if (defaultObject.gui.start.hide) gui.hide()
 
     // GENERAL
     const debug = (() => {
 
-      const folder = gui.addFolder('Debug').close()
+      const folder = gui.addFolder('Debug')   
+
+      if (defaultObject.gui.debug.close) folder.close()
 
       folder
         .add(debugObject, 'axesHelper')
@@ -193,7 +196,9 @@ if (showGui) {
 
       if (defaultObject.floor.active) {
         
-        const floorTextureFolder = gui.addFolder('Floor').close()
+        const floorTextureFolder = gui.addFolder('Floor')
+
+        if (defaultObject.floor.gui.close) floorTextureFolder.close()
     
         floorTextureFolder
           .add(objects.meshes.floor.material, 'displacementBias')

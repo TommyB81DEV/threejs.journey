@@ -24,6 +24,15 @@ const defaultObject = {
 
   // Commons
   color: '#FFFFFF',
+  gui: {
+    debug: {
+      close: true,
+    },
+    start: {
+      close: false,
+      hide: false,
+    }
+  },
   material,
   rotationEnabled,
   rotationSpeed: 0.1,

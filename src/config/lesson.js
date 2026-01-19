@@ -8,6 +8,7 @@ let lessons = [
   '15-native',
   '16',
   '17',
+  '18',
 ]
 
-export const lesson = setLesson(lessons,'17')
+export const lesson = setLesson(lessons,'18')

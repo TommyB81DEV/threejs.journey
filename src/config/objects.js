@@ -11,6 +11,10 @@ export const defaultSettings = {
     wireframe: false,
   },
   floor: {
+    active: lesson === '16',
+    gui: {
+      close: true,
+    },
     material: {
       displacementBias: - 0.2,
       displacementScale: 0.3,
@@ -200,12 +204,10 @@ export const list = (
       // 'cube',
       'particles',
     ]
+  : lesson === '18' ?
+    []
   : // 
-    [
-      'cube',
-      'sphere',
-      'torus',
-    ]
+    []
 )
 
 export const reset = {
